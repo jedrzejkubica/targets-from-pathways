@@ -101,22 +101,20 @@ def calculate_scores(genes, gene2pathways, pathway2genes, disease_pathways, targ
     return(scores)
 
 
-def main(pathway_mapping_file, interactions_file):
-
-    TARGET="BTG4"
+def main(pathway_mapping_file, interactions_file, target):
 
     logger.info("Parsing gene-to-pathway mapping file")
     (gene2pathways, pathway2genes) = data_parser.parse_pathway_mapping(pathway_mapping_file)
 
     logger.info("Computing GSEA")
     # For now read list of enriched pathways from a file
-    disease_pathways = data_parser.parse_disease_pathways(file="/home/kubicaj/open-targets-hackathon/targets-from-pathways/data/gsea_output_ids/OT-EFO_0004248_gsea_ids.tsv")
+    disease_pathways = data_parser.parse_disease_pathways(file="gsea/gsea_output_ids/OT-EFO_0004248_gsea_ids.tsv")
     
     # Finding disease-specific and target-specific genes
     disease_genes = get_disease_genes(pathway2genes, disease_pathways)
     logger.info("Found %i disease-specific genes", len(disease_genes))
 
-    target_genes = get_target_genes(gene2pathways, pathway2genes, TARGET)
+    target_genes = get_target_genes(gene2pathways, pathway2genes, target)
     logger.info("Found %i genes that are on the same pathways as target", len(target_genes))
 
     disease_and_target_genes = find_overlap(disease_genes, target_genes)
@@ -124,7 +122,7 @@ def main(pathway_mapping_file, interactions_file):
 
     # Scoring
     logger.info("Calculating scores")
-    scores = calculate_scores(disease_and_target_genes, gene2pathways, pathway2genes, disease_pathways, TARGET)
+    scores = calculate_scores(disease_and_target_genes, gene2pathways, pathway2genes, disease_pathways, target)
     data_parser.scores_to_TSV(scores)
 
     # Prioritization with network propagation
@@ -163,11 +161,17 @@ if __name__ == "__main__":
                         type=pathlib.Path,
                         required=True)
 
+    parser.add_argument('--target',
+                        help='TODO',
+                        type=str,
+                        required=True)
+
     args = parser.parse_args()
 
     try:
         main(pathway_mapping_file=args.pathway_mapping_file,
-             interactions_file=args.interactions_file)
+             interactions_file=args.interactions_file,
+             target=args.target)
 
     except Exception as e:
         # details on the issue should be in the exception name, print it to stderr and die
