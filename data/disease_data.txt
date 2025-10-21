@@ -1,0 +1,2 @@
+disease_name	efo_id
+male infertility	EFO_0004248
