@@ -56,7 +56,7 @@ def parse_pathway_mapping(pathway_mapping_file):
     return(gene2pathways, pathway2genes)
 
 
-def parse_enriched_pathways(file):
+def parse_disease_pathways(file):
     list = []
     f = open(file, 'r')
     # skip header
@@ -123,7 +123,22 @@ def parse_interactions(interactions_file):
     return(interactions)
 
 
-def scores_to_TSV(interactions):
+def scores_to_TSV(scores):
+    '''
+    Print scores to stdout in TSV format, 2 columns: gene_name score
+
+    arguments:
+    - scores: dict with key=gene, value=score
+    '''
+
+    # header
+    print("GENE\tSCORE")
+
+    for (gene, score) in sorted(scores.items()):
+        print(gene + "\t" + str(score))
+
+
+def interactions_to_TSV(interactions):
     '''
     Print interactions to stdout in TSV format, 2 columns: gene1, gene2
 

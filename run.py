@@ -12,19 +12,19 @@ import data_parser
 logger = logging.getLogger(__name__)
 
 
-def get_disease_genes(pathway2genes, enriched_pathways):
+def get_disease_genes(pathway2genes, disease_pathways):
     """
     Find all genes that are on disease-specific pathways
 
     arguments:
     - pathway2genes
-    - enriched_pathways
+    - disease_pathways
     
     returns:
     - list of disease-specific genes
     """
     disease_genes = set()
-    for path in enriched_pathways:
+    for path in disease_pathways:
         genes_on_path = pathway2genes[path]
         logger.info("Found %i genes in %s", len(genes_on_path), path)
 
@@ -69,24 +69,63 @@ def find_overlap(list1, list2):
     return(overlap)
 
 
+def calculate_scores(genes, gene2pathways, pathway2genes, disease_pathways, target):
+    """
+    For every gene found in the overlap between disease-specific and target-specific list:
+    score = (#disease_paths_with_gene + #target_paths_with_gene) / (#disese_paths + #target_paths)
+
+    arguments:
+    - genes: list of genes from find_overlap
+    - gene2pathways
+    - 
+    
+    returns:
+    - scores: dict, key=gene, value=score
+    """
+    scores = {}
+    for gene in genes:
+        # #disease_paths_with_gene
+        gene_paths = gene2pathways[gene]
+        disease_paths_with_gene = find_overlap(gene_paths, disease_pathways)
+
+        # #target_paths_with_gene
+        target_paths = gene2pathways[target]
+        target_path_count = 0
+        for path in target_paths:
+            path_genes = pathway2genes[path]
+            if gene in path_genes:
+                target_path_count += 1
+
+        scores[gene] = (len(disease_paths_with_gene) + target_path_count) / (len(disease_pathways) + len(target_paths))
+
+    return(scores)
+
+
 def main(pathway_mapping_file, interactions_file):
+
+    TARGET="BTG4"
 
     logger.info("Parsing gene-to-pathway mapping file")
     (gene2pathways, pathway2genes) = data_parser.parse_pathway_mapping(pathway_mapping_file)
 
     logger.info("Computing GSEA")
     # For now read list of enriched pathways from a file
-    enriched_pathways = data_parser.parse_enriched_pathways(file="/home/kubicaj/open-targets-hackathon/targets-from-pathways/data/gsea_output_ids/OT-EFO_0004248_gsea_ids.tsv")
+    disease_pathways = data_parser.parse_disease_pathways(file="/home/kubicaj/open-targets-hackathon/targets-from-pathways/data/gsea_output_ids/OT-EFO_0004248_gsea_ids.tsv")
     
-    # Filtering
-    disease_genes = get_disease_genes(pathway2genes, enriched_pathways)
+    # Finding disease-specific and target-specific genes
+    disease_genes = get_disease_genes(pathway2genes, disease_pathways)
     logger.info("Found %i disease-specific genes", len(disease_genes))
 
-    target_genes = get_target_genes(gene2pathways, pathway2genes, target="BTG4")
+    target_genes = get_target_genes(gene2pathways, pathway2genes, TARGET)
     logger.info("Found %i genes that are on the same pathways as target", len(target_genes))
 
     disease_and_target_genes = find_overlap(disease_genes, target_genes)
     logger.info("Found %i genes that are both disease-specific and on the same pathways as target", len(disease_and_target_genes))
+
+    # Scoring
+    logger.info("Calculating scores")
+    scores = calculate_scores(disease_and_target_genes, gene2pathways, pathway2genes, disease_pathways, TARGET)
+    data_parser.scores_to_TSV(scores)
 
     # Prioritization with network propagation
     logger.info("Parsing interactions file")
@@ -95,7 +134,7 @@ def main(pathway_mapping_file, interactions_file):
     logger.info("Built network with %i nodes and %i interactions", len(network.nodes()), len(network.edges()))
 
     # logger.info("Printing interactions")
-    # data_parser.scores_to_TSV(interactions)
+    # data_parser.interactions_to_TSV(interactions)
 
     # Visualization
 

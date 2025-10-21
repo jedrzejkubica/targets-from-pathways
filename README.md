@@ -83,8 +83,11 @@ Part 2:
 Parse Reactome gene-to-pathway mapping, outputs genes that are both disease-specific and on the same pathways as target ("BTG4", random for now)
 
 ```
-python run.py --pathway_mapping_file data/Ensembl2Reactome_PE_All_Levels.txt --interactions_file data/FIsInGene_04142025_with_annotations.txt 1>interactions_reactome.tsv
+python run.py --pathway_mapping_file data/Ensembl2Reactome_PE_All_Levels.txt --interactions_file data/FIsInGene_04142025_with_annotations.txt 1>scores.tsv
 ```
+
+For every gene found in the overlap between disease-specific and target-specific list:
+score = (#disease_paths_with_gene + #target_paths_with_gene) / (#disese_paths + #target_paths)
 
 
 ## Results
