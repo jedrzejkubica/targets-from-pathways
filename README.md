@@ -24,10 +24,9 @@ The aim of the project was to develop a disease-specific pathway assessment tool
 - get_genes_for_pathway(pathway_id:List[str])
 - create_gene_matrix(ensembl_ids:List[str], pathway_ids:List[str])
 - GSEA
-- parse reactome interactions
 - find all genes that are both disease-specific and on the same pathways as target
-- visualize
-- prioritze targets (network propagation?)
+- prioritze targets (network propagation? anothe scoring formula?)
+- parse reactome interactions and map new targets to pathways, visualize
 
 
 ## How to use this repo
@@ -46,7 +45,7 @@ Prepare input data and run the pipeline as described below. See results in score
 
 ### Data
 
-Please, put all data files in a directory called data/
+Please, put all data files in a directory called `data/`
 
 > **_Note:_** All data files below are just test files with minimal data for our example target genes and disease
 
@@ -99,7 +98,7 @@ python run.py --pathway_mapping_file data/Ensembl2Reactome_PE_All_Levels.txt --i
 
 For every gene found in the overlap between disease-specific and target-specific list:
 
-score = (number of disease pathways containing the gene + number of target pathways containing the gene) / (total disease pathways + total target pathways)
+`score = (number of disease pathways containing the gene + number of target pathways containing the gene) / (total disease pathways + total target pathways)`
 
 
 ## Results
@@ -122,13 +121,15 @@ Here are top 10 genes we got in our study, using BTG4 as target:
 
 
 Reactome functional interaction network:
-![interactions_reactome](interactions_reactome.png)
+![interactions_reactome](results/interactions_reactome.png)
 
 
 ## Future directions
 
-- refine scoring formula
-- integrate within
+- refine scoring formula; efficy and safety (Target-PV)?
+- interpretability (show insights about scoring of new targets)
+- adapt for other target types (genes, proteins, miRNA)
+- integrate within Open Targets Platform
 
 
 ## Python environment
