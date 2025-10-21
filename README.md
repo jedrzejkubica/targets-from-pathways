@@ -1,9 +1,8 @@
 > Open Targets Hackathon, October 21-22, 2025
 
-# targets-from-pathways
+# Project #18: Target prioritisation by pathways
 
-
-## Aim
+The aim of the project was to develop a disease-specific pathway assessment tool. We built a bioinformatics workflow that uses an associated target to find disease-specific biological pathways and identify novel targets implicated in disease. This tool can help researchers understand the biological pathways underlying disease and identify novel intervention points considering both efficacy and safety profiles along with target tractability. Here we present a prototype developed during the hackathon.
 
 
 ## Contributors
@@ -33,6 +32,13 @@
 
 ## How to use this repo
 
+```
+git clone git@github.com:jedrzejkubica/targets-from-pathways.git
+cd targets-from-pathways
+```
+
+Prepare input data and run the pipeline as described below. See results in scores.tsv.
+
 
 ## Methods
 
@@ -57,43 +63,71 @@ Please, put all data files in a directory called data/
 - Reactome pathway gene set from REACTOME
 - Reactome pathway interactions file
 
-Reactome gene-to-pathway mapping:
+Reactome gene-to-pathway mapping file:
 ```
 wget https://download.reactome.org/94/Ensembl2Reactome_PE_All_Levels.txt
 ```
 
-Reactome functional interactions as described in Wu et al., 2010:
+Reactome functional interaction file (see Wu et al., 2010):
 ```
 wget http://cpws.reactome.org/caBigR3WebApp2025/FIsInGene_04142025_with_annotations.txt.zip
 ```
 
 
-### Scripts
+### Software
 
 Part 1:
 
-I have added a main_script.py file that demonstrates how our final script will work. Please populate the remaining pipeline in the main script as required.
+Use Pathway Targets Extractor (https://github.com/MaayanLab/blitzgsea), a Python module for Gene Set Enrichment Analysis, to extract pathway-target gene pairs.
+
+
+Part 2:
+
+main_script.py demonstrates how our final script should work. Please populate the remaining pipeline in the main script as required.
 
 ```
 python main_script.py --gene_name="SLC22A11" --disease_name="male infertility"
 ```
 
-Part 2:
+Part 3:
 
-Parse Reactome gene-to-pathway mapping, outputs genes that are both disease-specific and on the same pathways as target ("BTG4", random for now)
+Parse Reactome gene-to-pathway mapping, outputs genes that are both disease-specific and on the same pathways as target (using "BTG4" for now as example)
 
 ```
 python run.py --pathway_mapping_file data/Ensembl2Reactome_PE_All_Levels.txt --interactions_file data/FIsInGene_04142025_with_annotations.txt 1>scores.tsv
 ```
 
 For every gene found in the overlap between disease-specific and target-specific list:
-score = (#disease_paths_with_gene + #target_paths_with_gene) / (#disese_paths + #target_paths)
+
+score = (number of disease pathways containing the gene + number of target pathways containing the gene) / (total disease pathways + total target pathways)
 
 
 ## Results
 
+Here are top 10 genes we got in our study, using BTG4 as target:
+
+| Gene   | Score |
+|--------|--------|
+| TUBB4B | 0.76   |
+| RPS2   | 0.72   |
+| POLR2D | 0.68   |
+| PABPC1 | 0.68   |
+| EIF4G1 | 0.68   |
+| EIF4E  | 0.68   |
+| EIF4B  | 0.68   |
+| EIF4A2 | 0.68   |
+| EIF4A1 | 0.68   |
+| BIRC5  | 0.68   |
+| ZP2    | 0.64   |
+
+
+Reactome functional interaction network:
+![interactions_reactome](interactions_reactome.png)
+
 
 ## Future directions
+
+- refine scoring formula
 
 
 ## Python environment
