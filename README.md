@@ -126,8 +126,13 @@ Reactome functional interaction network:
 
 ## Future directions
 
+Short-term:
 - refine scoring formula; efficy and safety (Target-PV)?
-- interpretability (show insights about scoring of new targets)
+- use [Reactome functional interaction network](targets-from-pathways/results/interactions_reactome.tsv) for interpretability
+- get insights about scoring of new targets
+- assess the method's performance
+
+Long-term:
 - adapt for other target types (genes, proteins, miRNA)
 - integrate within Open Targets Platform
 
