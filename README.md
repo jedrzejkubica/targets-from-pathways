@@ -1,11 +1,47 @@
+> Open Targets Hackathon, October 21-22, 2025
+
 # targets-from-pathways
 
+
+## Aim
+
+
 ## Contributors
-Siddharth Sethi: sidharth.sethi@astx.com
+- Jędrzej Kubica (jedrzej.kubica@univ-grenoble-alpes.fr)
+- Siddharth Sethi (sidharth.sethi@astx.com)
+- Polina
+- Elvis
 
-## Codebase
 
-### Data required to load
+## Introdution
+
+
+### TODO Initial plan:
+- validate_input(gene_symbol:str, disease_name:str)
+   - Validate and fetch gene ensembl_id and disease EFO_id
+- get_genes_associated_with_disease(disease_efo_id, data_source=None, score_threshold=None)
+- execute_gsea()
+- get_pathways_for_gene(ensembl_ids:List[str])
+- get_genes_for_pathway(pathway_id:List[str])
+- create_gene_matrix(ensembl_ids:List[str], pathway_ids:List[str])
+- GSEA
+- parse reactome interactions
+- find all genes that are both disease-specific and on the same pathways as target
+- visualize
+- prioritze targets (network propagation?)
+
+
+## How to use this repo
+
+
+## Methods
+
+### Flowchart
+
+### Data
+
+Please, put all data files in a directory called data/
+
 > **_Note:_** All data files below are just test files with minimal data for our example target genes and disease
 
 - Gene metadata (gene_symbol, ensembl_id)  
@@ -21,20 +57,46 @@ Siddharth Sethi: sidharth.sethi@astx.com
 - Reactome pathway gene set from REACTOME
 - Reactome pathway interactions file
 
-### Required functions
-1. validate_input(gene_symbol:str, disease_name:str)
-   - Validate and fetch gene ensembl_id and disease EFO_id
-2. get_genes_associated_with_disease(disease_efo_id, data_source=None, score_threshold=None)
-3. execute_gsea()
-4. get_pathways_from_genes(ensembl_ids:List[str])
-5. get_genes_from_pathway(pathway_id:List[str])
-6. create_gene_matrix(ensembl_ids:List[str], pathway_ids:List[str])
-7. parse reactome (?)
+Reactome gene-to-pathway mapping:
+```
+wget https://download.reactome.org/94/Ensembl2Reactome_PE_All_Levels.txt
+```
 
-### main_script
+Reactome functional interactions as described in Wu et al., 2010:
+```
+wget http://cpws.reactome.org/caBigR3WebApp2025/FIsInGene_04142025_with_annotations.txt.zip
+```
+
+
+### Scripts
+
+Part 1:
 
 I have added a main_script.py file that demonstrates how our final script will work. Please populate the remaining pipeline in the main script as required.
 
-```python
+```
 python main_script.py --gene_name="SLC22A11" --disease_name="male infertility"
 ```
+
+Part 2:
+
+Parse Reactome gene-to-pathway mapping, outputs genes that are both disease-specific and on the same pathways as target ("BTG4", random for now)
+
+```
+python run.py --pathway_mapping_file data/Ensembl2Reactome_PE_All_Levels.txt --interactions_file data/FIsInGene_04142025_with_annotations.txt 1>interactions_reactome.tsv
+```
+
+
+## Results
+
+
+## Future directions
+
+
+## Python environment
+
+required packages: networkx, pandas
+
+
+## References
+1. Wu, G., Feng, X. & Stein, L. A human functional protein interaction network and its application to cancer data analysis. Genome Biol 11, R53 (2010). https://doi.org/10.1186/gb-2010-11-5-r53
