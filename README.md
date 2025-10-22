@@ -94,15 +94,26 @@ During the hackathon we focused on male infertiltiy (EFO_0004248) and ESR1 as ta
 
 1) GSEA:
 ```
+cd gsea
+```
+
+```
 python run_gsea.py --target_parquets_dir ../data/target/ --associations_parquets_dir ../data/association_by_datasource_indirect/ --disease EFO_0004248 --datatype genetic_association --gmt_file ../data/ReactomePathways_merged.gmt --pval_threshold 0.05 --fdr_threshold 1 1>enriched_pathways.txt
 ```
 
 2) Pathway-based scoring:
 ```
+cd reactome
+```
+
+```
 python run_reactome.py --pathway_mapping_file ../data/Ensembl2Reactome_PE_All_Levels.txt --disease_pathways_file ../gsea/disease_pathways.txt --interactions_file ../data/FIsInGene_04142025_with_annotations.txt --target ESR1 1>scores.tsv
 ```
 
 3) Network propagation scoring:
+```
+cd network_propagation
+```
 
 TODO run multixrank
 
