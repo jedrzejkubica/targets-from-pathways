@@ -65,21 +65,20 @@ def run_gsea(gsea_input, library_sets):
 
 def filter_pathways_by_pvalue(gsea_results, pval_threshold, fdr_threshold):
     """
-    Filter GSEA results and return a list of pathway IDs
+    Filter GSEA results based on p-value or FDR threshold
+    
+    returns:
+     - pathways: list of str, significantly enriched pathways
     """
+    # Create p-value and FDR filters
+    mask = pandas.Series(True, index=gsea_results.index)
+    mask &= gsea_results["pval"] <= pval_threshold
+    mask &= gsea_results["qval"] <= fdr_threshold
 
-    df = gsea_results
-    mask = pandas.Series(True, index=df.index)
+    gsea_results_filtered = gsea_results.loc[mask, ["ID"]]
+    pathways = gsea_results_filtered["ID"].tolist()
 
-    # Apply p-value filter
-    mask &= df["pval"] <= pval_threshold
-
-    # Apply FDR filter
-    mask &= df["qval"] <= fdr_threshold
-
-    gsea_results_filtered = df.loc[mask, ["ID"]].copy().rename(columns={"ID": "pathwayId"})
-
-    return gsea_results_filtered
+    return pathways
 
 
 def main(target_parquets_dir, associations_parquets_dir, disease, datatype, gmt_file, pval_threshold, fdr_threshold):
@@ -97,9 +96,10 @@ def main(target_parquets_dir, associations_parquets_dir, disease, datatype, gmt_
     gsea_results = run_gsea(gsea_input, library_sets)
 
     # Filter  pathways by p-value
-    gsea_results_filtered = filter_pathways_by_pvalue(gsea_results, pval_threshold, fdr_threshold)
+    pathways = filter_pathways_by_pvalue(gsea_results, pval_threshold, fdr_threshold)
 
-    print(gsea_results_filtered)
+    logger.info("Printing significantly enriched pathways")
+    data_parser.pathways_to_TSV(pathways)
 
 
 if __name__ == "__main__":

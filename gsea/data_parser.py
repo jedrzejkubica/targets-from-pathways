@@ -9,15 +9,13 @@ logger = logging.getLogger(__name__)
 
 def parse_target_parquet(target_parquets_dir):
     """
-    Parses target parquet files from Open Targets Platform with 2 columns:
-    id, approvedSymbol
+    Parses target parquet files from Open Targets Platform with 2 columns: id, approvedSymbol
 
     arguments:
-    - target_parquets_dir: target/ directory
+    - target_parquets_dir: directory to Open Targets targets parquets
 
     return:
     - target2symbol: dict, key=target ID, value=approved symbol
-    - symbol2target: dict
     """
     target2symbol = {}
 
@@ -44,7 +42,7 @@ def parse_associations_parquet(associations_parquets_dir, disease, datatype):
     disease_id, datatype, score, target_id
 
     arguments:
-    - associations_parquets_dir: association_by_datasource_indirect/ directory
+    - associations_parquets_dir: directory to Open Targets associations parquets
 
     return:
     - target2score: dict, key=target ID, value=score
@@ -73,10 +71,10 @@ def parse_associations_parquet(associations_parquets_dir, disease, datatype):
 
 def build_gsea_input(target2symbol, target2score):
     """
-    Create GSEA input DataFrame for a given disease EFO ID
+    Create GSEA input
 
     returns:
-    - symbol2score: dict, key=symbol, value=score
+    - gsea_input: DataFrame with two columns: symbol, score
     """
     symbol2score = {}
 
@@ -102,4 +100,15 @@ def parse_gmt_file(gmt_file):
             for line in f
             if (parts := line.strip().split("\t")) and len(parts) > 2
         }
-    return()
+    
+
+def pathways_to_TSV(pathways):
+    '''
+    Print significantly enriched pathways to stdout, one pathway ID per line
+
+    arguments:
+    - pathways: list of str
+    '''
+
+    for pathway in pathways:
+        print(pathway)

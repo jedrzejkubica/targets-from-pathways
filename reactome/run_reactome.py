@@ -101,16 +101,14 @@ def calculate_scores(genes, gene2pathways, pathway2genes, disease_pathways, targ
     return(scores)
 
 
-def main(pathway_mapping_file, interactions_file, target):
+def main(pathway_mapping_file, disease_pathways_file, interactions_file, target):
 
     logger.info("Parsing gene-to-pathway mapping file")
     (gene2pathways, pathway2genes) = data_parser.parse_pathway_mapping(pathway_mapping_file)
 
     logger.info("Computing GSEA")
     # Read list of enriched pathways from provided override or legacy default
-    ids_path = os.environ.get("GSEA_IDS_FILE_OVERRIDE", "gsea/gsea_output_ids/OT-EFO_0004248_gsea_ids.tsv")
-    logger.info("Reading enriched pathway IDs from %s", ids_path)
-    disease_pathways = data_parser.parse_disease_pathways(file=ids_path)
+    disease_pathways = data_parser.parse_disease_pathways(disease_pathways_file)
     
     # Finding disease-specific and target-specific genes
     disease_genes = get_disease_genes(pathway2genes, disease_pathways)
@@ -122,12 +120,12 @@ def main(pathway_mapping_file, interactions_file, target):
     disease_and_target_genes = find_overlap(disease_genes, target_genes)
     logger.info("Found %i genes that are both disease-specific and on the same pathways as target", len(disease_and_target_genes))
 
-    # Scoring
+    # Pathway selectivity
     logger.info("Calculating scores")
     scores = calculate_scores(disease_and_target_genes, gene2pathways, pathway2genes, disease_pathways, target)
     data_parser.scores_to_TSV(scores)
 
-    # Prioritization with network propagation
+    # Network propagation
     logger.info("Parsing interactions file")
     interactions = data_parser.parse_interactions(interactions_file)
     network = networkx.from_edgelist(interactions)
@@ -154,29 +152,30 @@ if __name__ == "__main__":
     )
     
     parser.add_argument('--pathway_mapping_file',
-                        help='TODO',
+                        help='From Reactome, see GitHub README',
+                        type=pathlib.Path,
+                        required=True)
+    
+    parser.add_argument('--disease_pathways_file',
+                        help='Significantly enriched pathways from GSEA, one pathway ID per line',
                         type=pathlib.Path,
                         required=True)
 
     parser.add_argument('--interactions_file',
-                        help='TODO',
+                        help='From Reactome, see GitHub README',
                         type=pathlib.Path,
                         required=True)
 
     parser.add_argument('--target',
-                        help='TODO',
+                        help='target gene name',
                         type=str,
                         required=True)
-
-    parser.add_argument('--gsea_ids_file',
-                        help='TSV of pathway IDs (column: pathwayId). Defaults to the legacy hardcoded path.',
-                        type=pathlib.Path,
-                        required=False)
 
     args = parser.parse_args()
 
     try:
         main(pathway_mapping_file=args.pathway_mapping_file,
+             disease_pathways_file=args.disease_pathways_file,
              interactions_file=args.interactions_file,
              target=args.target)
 

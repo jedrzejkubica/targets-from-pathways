@@ -59,8 +59,6 @@ def parse_pathway_mapping(pathway_mapping_file):
 def parse_disease_pathways(file):
     list = []
     f = open(file, 'r')
-    # skip header
-    f.readline()
 
     for line in f:
         list.append(line.rstrip('\n'))
@@ -130,7 +128,6 @@ def scores_to_TSV(scores):
     arguments:
     - scores: dict with key=gene, value=score
     '''
-
     # header
     print("GENE\tSCORE")
 
@@ -145,6 +142,5 @@ def interactions_to_TSV(interactions):
     arguments:
     - interactions: list of directed functional interactions
     '''
-
     for interaction in interactions:
         print(interaction[0] + "\t" + interaction[1])
