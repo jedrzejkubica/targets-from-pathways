@@ -20,8 +20,6 @@ The aim of the project was to develop a disease-specific pathway assessment tool
 
 ## Introdution
 
-perhaps the medication for this target doesn't work
-
 Initial plan:
 - get genes associated with disease
 - get disease pathways using GSEA
@@ -59,7 +57,7 @@ mkdir data
 cd data/
 ```
 
-Download:
+Download to data/:
 - Open Targets associations parquets, source: Open Targets Platform (Associations - indirect (by data source))
   ```
   wget --recursive --no-parent --no-host-directories --cut-dirs 6 ftp://ftp.ebi.ac.uk/pub/databases/opentargets/platform/25.09/output/association_by_datasource_indirect .
