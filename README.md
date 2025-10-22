@@ -1,8 +1,14 @@
 > Open Targets Hackathon, October 21-22, 2025
 
-# Project #18: Target prioritisation by pathways
 
-The aim of the project was to develop a disease-specific pathway assessment tool. We built a bioinformatics workflow that uses an associated target to find disease-specific biological pathways and identify novel targets implicated in disease. This tool can help researchers understand the biological pathways underlying disease and identify novel intervention points considering both efficacy and safety profiles along with target tractability. Here we present a prototype developed during the hackathon.
+<h1 align="left">Project #18: Target prioritisation by pathways </h1>
+
+<p align="center">
+  <img width="600" height="400" src="figures/team_logo.png">
+</p>
+
+
+The aim of the project was to develop a disease-specific pathway assessment tool. We built a bioinformatics workflow that uses an associated target and disease-specific biological pathways to find novel targets implicated in disease. This tool can help researchers understand the biological pathways underlying disease and identify novel intervention points considering both efficacy and safety profiles along with target tractability. Here we present a prototype developed during the hackathon.
 
 
 ## Contributors
@@ -41,12 +47,12 @@ Prepare input data and run the pipeline as described below. See results in score
 
 ## Methods
 
-### Flowchart
-
 We introduced a new methodology for target prioritization. The user inputs a disease and a target of interest (perhaps the medication for this target doesn't work). First, we get a gene list for the disease from Open Targets Platform (Associations - indirect (by data source) ; http://ftp.ebi.ac.uk/pub/databases/opentargets/platform/25.09/output/association_by_datasource_indirect) and perform GSEA using the blitzgsea Python package (https://github.com/MaayanLab/blitzgsea). We obtain pathways associated with the disease. Second, we find also all pathways with the target on it also using Reactome database (gene-to-pathway mapping ; https://download.reactome.org/94/Ensembl2Reactome_PE_All_Levels.txt). That's how we get pathways associated with the disease and the target and we find all genes that are on these pathways. The, we prioritize these genes as new potential targets for the disease by:
 - scoring using pathway selectivity (formula below)
 - scoring using network propagation (Random Walk with Restart, MutliXrank (Baptista et al, 2020) ; https://github.com/anthbapt/multixrank)
 Finally, we obtain a list of scored genes, the higher the score, the more likely it is to be associated with the disease and the target (based on pathways only).
+
+### Flowchart
 
 ### Data
 
@@ -78,7 +84,7 @@ wget http://cpws.reactome.org/caBigR3WebApp2025/FIsInGene_04142025_with_annotati
 ```
 
 
-### Software
+### Run pipeline
 
 Part 1:
 
@@ -109,10 +115,20 @@ For every gene found in the overlap between disease-specific and target-specific
 
 Network propagation on the functional interaction network:
 
+use run.py (uncomment lines in main() if necessary) to generate interactions_reactome.tsv
+
+Run RWR:
+```
+prepare config.yml
+mkdir -p reactome/multiplex/1
+cp ~/open-targets-hackathon/targets-from-pathways/results/interactions_reactome.tsv
+prepare seeds.txt (target + disease genes same as for GSEA)
+python run_multirank.py (provided in this repo)
+```
 
 ## Results
 
-Here are top 10 genes based on pathway selectivity (using BTG4 as target):
+Here are top 10 genes based on pathway selectivity (using BTG4 as target as example):
 
 | Gene   | Score |
 |--------|--------|
@@ -130,28 +146,38 @@ Here are top 10 genes based on pathway selectivity (using BTG4 as target):
 
 
 Reactome functional interaction network:
-![interactions_reactome](results/interactions_reactome.png)
+![interactions_reactome](figures/interactions_reactome.png)
 
-Here are top 10 genes based on network propagation (using x as seeds):
+Here are top 10 genes based on network propagation (using target + disease genes as seeds):
 
 
 ## Future directions
 
 Short-term:
 - refine and test the pathway selectivity scoring formula
-- use [Reactome functional interaction network](targets-from-pathways/results/interactions_reactome.tsv) for network propagation
-- get insights about scoring of new targets, interpretability
-- assess the method's performance, compare with similar studies
+- finalize and assess network propagation with Reactome functional interaction network (interactions_reactome.tsv)
+- get insights about scoring of new targets + interpretability
+- assess the method's performance, compare with similar methodologies
 
 Long-term:
 - adapt for other target types (genes, proteins, miRNA)
-- use efficy and safety (Target-PV)
-- integrate within Open Targets Platform
+- identify drug repurposing opportunities
+- effect of target knockout within the network
+- given a desired effect (inhibition, activation) recommend top drugs
+- use efficy and safety (Open Targets Pharmacovigilance)
+- integrate pipeline within Open Targets Platform (https://platform.opentargets.org/)
 
 
 ## Python environment
 
-required packages: networkx, pandas, blitzgsea (https://github.com/MaayanLab/blitzgsea)
+required packages:
+- networkx
+- pandas
+- blitzgsea (https://github.com/MaayanLab/blitzgsea)
+- multixrank (https://github.com/anthbapt/multixrank)
+
+
+## Special thank you to the Organizers of the Open Targets Hackathon!
 
 
 ## References
