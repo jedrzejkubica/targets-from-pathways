@@ -3,6 +3,9 @@ import sys
 import logging
 import argparse
 import pathlib
+import urllib.request
+import zipfile
+import shutil
 
 import networkx
 
@@ -10,6 +13,57 @@ import data_parser
 
 # set up logger, using inherited config, in case we get called as a module
 logger = logging.getLogger(__name__)
+
+# Known sources for Reactome files
+REACTOME_MAPPING_URL = "https://download.reactome.org/94/Ensembl2Reactome_PE_All_Levels.txt"
+REACTOME_INTERACTIONS_ZIP_URL = (
+    "http://cpws.reactome.org/caBigR3WebApp2025/FIsInGene_04142025_with_annotations.txt.zip"
+)
+REACTOME_INTERACTIONS_TXT = "FIsInGene_04142025_with_annotations.txt"
+
+
+def _ensure_reactome_mapping(path: pathlib.Path) -> None:
+    """Download the Reactome Ensembl2Reactome mapping if missing and filename matches expected.
+
+    Only auto-downloads when the basename is 'Ensembl2Reactome_PE_All_Levels.txt'.
+    """
+    if path.exists():
+        return
+    if path.name != "Ensembl2Reactome_PE_All_Levels.txt":
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    logging.info("Downloading Reactome mapping to %s", path)
+    urllib.request.urlretrieve(REACTOME_MAPPING_URL, str(path))
+
+
+def _ensure_reactome_interactions(path: pathlib.Path) -> None:
+    """Download and unzip the Reactome interactions file if missing using known URL.
+
+    Only auto-downloads when the basename is 'FIsInGene_04142025_with_annotations.txt'.
+    """
+    if path.exists():
+        return
+    if path.name != REACTOME_INTERACTIONS_TXT:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    zip_path = path.with_suffix(path.suffix + ".zip")
+    logging.info("Downloading Reactome interactions zip to %s", zip_path)
+    urllib.request.urlretrieve(REACTOME_INTERACTIONS_ZIP_URL, str(zip_path))
+    logging.info("Unzipping interactions...")
+    with zipfile.ZipFile(str(zip_path), "r") as zf:
+        # Extract desired txt; fall back to extracting all and renaming
+        members = zf.namelist()
+        if REACTOME_INTERACTIONS_TXT in members:
+            zf.extract(REACTOME_INTERACTIONS_TXT, path.parent)
+        else:
+            zf.extractall(path.parent)
+    # Ensure the expected target path exists
+    extracted = path.parent / REACTOME_INTERACTIONS_TXT
+    if extracted.exists() and extracted != path:
+        try:
+            shutil.move(str(extracted), str(path))
+        except Exception:
+            pass
 
 
 def get_disease_genes(pathway2genes, disease_pathways):
@@ -107,8 +161,10 @@ def main(pathway_mapping_file, interactions_file, target):
     (gene2pathways, pathway2genes) = data_parser.parse_pathway_mapping(pathway_mapping_file)
 
     logger.info("Computing GSEA")
-    # For now read list of enriched pathways from a file
-    disease_pathways = data_parser.parse_disease_pathways(file="gsea/gsea_output_ids/OT-EFO_0004248_gsea_ids.tsv")
+    # Read list of enriched pathways from provided override or legacy default
+    ids_path = os.environ.get("GSEA_IDS_FILE_OVERRIDE", "gsea/gsea_output_ids/OT-EFO_0004248_gsea_ids.tsv")
+    logger.info("Reading enriched pathway IDs from %s", ids_path)
+    disease_pathways = data_parser.parse_disease_pathways(file=ids_path)
     
     # Finding disease-specific and target-specific genes
     disease_genes = get_disease_genes(pathway2genes, disease_pathways)
@@ -166,9 +222,30 @@ if __name__ == "__main__":
                         type=str,
                         required=True)
 
+    parser.add_argument('--gsea_ids_file',
+                        help='TSV of pathway IDs (column: pathwayId). Defaults to the legacy hardcoded path.',
+                        type=pathlib.Path,
+                        required=False)
+
+    parser.add_argument('--auto_fetch',
+                        help='Automatically download missing Reactome mapping/interactions if using default filenames',
+                        action='store_true')
+
     args = parser.parse_args()
 
     try:
+        # If provided, override the legacy hardcoded GSEA IDs path by temporarily
+        # setting the environment variable used in main() to locate the file.
+        # For backwards compatibility we keep the default behavior when not set.
+        if args.gsea_ids_file is not None:
+            # Monkey-patch the module-level default by passing through a kwarg via env
+            os.environ["GSEA_IDS_FILE_OVERRIDE"] = str(args.gsea_ids_file)
+
+        # Optionally auto-fetch missing inputs
+        if args.auto_fetch:
+            _ensure_reactome_mapping(args.pathway_mapping_file)
+            _ensure_reactome_interactions(args.interactions_file)
+
         main(pathway_mapping_file=args.pathway_mapping_file,
              interactions_file=args.interactions_file,
              target=args.target)

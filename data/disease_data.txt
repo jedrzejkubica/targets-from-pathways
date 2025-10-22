@@ -1,2 +1,3 @@
 disease_name	efo_id
 male infertility	EFO_0004248
+male reproductive system disease    EFO_0009555

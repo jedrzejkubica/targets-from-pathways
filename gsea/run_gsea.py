@@ -63,6 +63,18 @@ def run_gsea_from_tsv(
     first_cols = ["Term", "ID"]
     res_df = res_df[first_cols + [c for c in res_df.columns if c not in first_cols]]
 
+    # Ensure FDR (qval) is available: compute from pval if missing
+    if "qval" not in res_df.columns and "pval" in res_df.columns:
+        p = pd.to_numeric(res_df["pval"], errors="coerce")
+        n = p.shape[0]
+        # Sort ascending by p-value
+        order = p.sort_values().index
+        ranks = pd.Series(range(1, n + 1), index=order)
+        q_raw = (p.loc[order] * n / ranks)
+        # Benjamini–Hochberg step-up: cumulative min from bottom
+        q_adj = q_raw.iloc[::-1].cummin().iloc[::-1].clip(upper=1.0)
+        res_df["qval"] = q_adj.reindex(res_df.index).fillna(1.0)
+
     if output_tsv is None:
         output_tsv = f"{os.path.splitext(input_tsv)[0]}_gsea.tsv"
 
@@ -74,24 +86,43 @@ def run_gsea_from_tsv(
 
 def filter_pathway_ids_by_pvalue(
     gsea_results: pd.DataFrame,
-    pval_threshold: float = 0.05,
+    pval_threshold: float | None = None,
     output_ids_tsv: str | None = None,
+    fdr_threshold: float | None = None,
+    nes_positive: bool = False,
 ) -> pd.DataFrame:
     """
-    Filter GSEA results by pval <= threshold and return a DataFrame with one
-    column 'pathwayId' (renamed from 'ID'). Optionally write it to a TSV.
+    Filter GSEA results and return a DataFrame with one column 'pathwayId'.
 
-    - gsea_results: DataFrame produced by run_gsea_from_tsv
-    - pval_threshold: inclusive threshold for 'pval' column
-    - output_ids_tsv: optional path to save the filtered IDs as TSV
+    - If fdr_threshold is provided and 'qval' exists, filter by qval <= fdr_threshold.
+    - Otherwise filter by pval <= pval_threshold (requires 'pval').
+    - If nes_positive is True and 'NES' exists, filter additionally by NES > 0.
+    - Writes TSV if output_ids_tsv is provided.
     """
-    if "pval" not in gsea_results.columns:
-        raise ValueError("Expected 'pval' column in GSEA results")
     if "ID" not in gsea_results.columns:
         raise ValueError("Expected 'ID' column in GSEA results")
 
-    filtered = gsea_results.loc[gsea_results["pval"] <= pval_threshold, ["ID"]].copy()
-    filtered = filtered.rename(columns={"ID": "pathwayId"})
+    df = gsea_results
+    mask = pd.Series(True, index=df.index)
+
+    # Apply p-value filter if requested (skip if column missing)
+    if pval_threshold is not None:
+        if "pval" in df.columns:
+            mask &= df["pval"] <= pval_threshold
+        else:
+            print("[GSEA] Warning: 'pval' column missing; skipping p-value filtering")
+
+    # Apply FDR filter if requested (skip if column missing)
+    if fdr_threshold is not None:
+        if "qval" in df.columns:
+            mask &= df["qval"] <= fdr_threshold
+        else:
+            print("[GSEA] Warning: 'qval' column missing; skipping FDR filtering")
+
+    if nes_positive and "NES" in df.columns:
+        mask &= df["NES"] > 0
+
+    filtered = df.loc[mask, ["ID"]].copy().rename(columns={"ID": "pathwayId"})
 
     if output_ids_tsv is not None:
         os.makedirs(os.path.dirname(output_ids_tsv) or ".", exist_ok=True)
@@ -114,8 +145,21 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         "--pval-threshold",
         dest="pval_threshold",
         type=float,
-        default=0.05,
-        help="Inclusive p-value threshold to filter pathway IDs (default: 0.05)",
+        default=None,
+        help="Optional p-value threshold; if set, keep rows with pval <= threshold",
+    )
+    parser.add_argument(
+        "--fdr-threshold",
+        dest="fdr_threshold",
+        type=float,
+        default=None,
+        help="Optional FDR (qval) threshold; if provided and 'qval' exists, overrides p-value",
+    )
+    parser.add_argument(
+        "--nes-positive",
+        dest="nes_positive",
+        action="store_true",
+        help="If set, also require NES > 0 when filtering IDs",
     )
     parser.add_argument(
         "--output-ids",
@@ -146,6 +190,8 @@ def main() -> None:
         gsea_results=res,
         pval_threshold=args.pval_threshold,
         output_ids_tsv=args.output_ids_tsv,
+        fdr_threshold=args.fdr_threshold,
+        nes_positive=args.nes_positive,
     )
 
 
