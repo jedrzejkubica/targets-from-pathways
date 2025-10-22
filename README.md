@@ -1,7 +1,7 @@
 > Open Targets Hackathon, October 21-22, 2025
 
 
-<h1 align="left">Project #18: Target prioritisation by pathways </h1>
+<h1 align="left">Project #18: Target prioritization by pathways </h1>
 
 <p align="center">
   <img width="600" height="400" src="figures/team_logo.png">
@@ -138,6 +138,7 @@ Reactome functional interaction network:
 
 Here are top 10 genes based on network propagation (using ESR1 + disease genes as seeds):
 
+TODO run multixrank
 
 
 ## Future directions
