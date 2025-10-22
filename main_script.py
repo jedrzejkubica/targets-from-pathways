@@ -64,6 +64,10 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Auto-download missing Reactome mapping/interactions (default filenames only)",
     )
+    # Data source paths forwarded to sid
+    parser.add_argument("--associations_dir", type=str, default=None, help="Directory of association parquet parts")
+    parser.add_argument("--associations_tsv", type=str, default=None, help="Single TSV of associations (fallback)")
+    parser.add_argument("--target_dir", type=str, default=None, help="Directory of target parquet parts")
     parser.add_argument(
         "--run_reactome",
         action="store_true",
@@ -94,7 +98,12 @@ def main() -> None:
     exp_dir = args.experiment_dir or _default_experiment_dir(args.gene_name, args.disease_name)
     ensure_dir(exp_dir)
 
-    # 1) Build GSEA input (symbol, globalScore) from association data for the disease
+    # 1) Configure data sources and build GSEA input
+    sid.configure_data_sources(
+        associations_dir=args.associations_dir,
+        associations_tsv=args.associations_tsv,
+        target_dir=args.target_dir,
+    )
     sid.load_data()
     # Optional gene validation
     if args.gene_name:

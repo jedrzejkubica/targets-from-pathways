@@ -11,6 +11,11 @@ GENE_ID_TO_NAME: Optional[Dict[str, str]] = None
 DISEASE_NAME_TO_ID: Optional[Dict[str, str]] = None
 DISEASE_ASSOC_DATA: Optional[pd.DataFrame] = None
 
+# Configurable data sources (can be set via CLI/env)
+ASSOCIATIONS_DIR: Optional[str] = None
+ASSOCIATIONS_TSV: Optional[str] = None
+TARGET_DIR: Optional[str] = None
+
 
 def _load_two_column_tsv_to_map(filepath: str) -> Dict[str, str]:
     """Read a two-column TSV and return mapping col1 -> col2 (as strings)."""
@@ -30,101 +35,56 @@ def _load_two_column_tsv_to_map(filepath: str) -> Dict[str, str]:
     return mapped
 
 
-def _load_gene_maps(gene_data_file: str = "data/gene_data.txt") -> None:
-    """Populate gene symbol/name <-> Ensembl ID maps using the best available sources.
+def _load_gene_maps() -> None:
+    """Populate gene symbol/name <-> Ensembl ID maps from Open Targets target parquet.
 
-    Priority order for id->symbol mapping:
-      1) Open Targets targets parquet under data/target/ (id -> approvedSymbol)
-      2) Reactome mapping file data/Ensembl2Reactome_PE_All_Levels.txt (ensembleID -> gene_name)
-      3) Local fallback data/gene_data.txt (gene_name -> gene_id) [limited]
+    Requires TARGET_DIR to point to a directory with target parquet parts containing
+    at least the columns 'id' and a symbol column among: approvedSymbol|symbol|gene_symbol.
     """
     global GENE_NAME_TO_ID, GENE_ID_TO_NAME
     if GENE_NAME_TO_ID is not None and GENE_ID_TO_NAME is not None:
         return
 
+    # Resolve target directory from CLI/env config
+    target_dir = TARGET_DIR or os.environ.get("SID_TARGET_DIR")
+    if not target_dir or not os.path.isdir(target_dir):
+        raise FileNotFoundError(
+            "Target parquet directory not set or not found. Provide --target_dir or set SID_TARGET_DIR."
+        )
+
     id_to_symbol: Dict[str, str] = {}
+    parts = [
+        os.path.join(target_dir, f)
+        for f in sorted(os.listdir(target_dir))
+        if f.endswith(".parquet") or f.endswith(".snappy.parquet")
+    ]
+    if not parts:
+        raise FileNotFoundError(f"No parquet files found in {target_dir}")
 
-    # 1) Try Open Targets target parquet export (comprehensive)
-    target_dir = "data/target"
-    if os.path.isdir(target_dir):
-        parts = [
-            os.path.join(target_dir, f)
-            for f in sorted(os.listdir(target_dir))
-            if f.endswith(".parquet") or f.endswith(".snappy.parquet")
-        ]
-        for p in parts:
-            try:
-                # Most exports have columns id, approvedSymbol
-                dfp = pd.read_parquet(p, columns=["id", "approvedSymbol"])  # type: ignore[arg-type]
-            except Exception:
-                try:
-                    dfp = pd.read_parquet(p)  # type: ignore[arg-type]
-                except Exception:
-                    continue
-            # Normalize possible column names
-            cols = {c.lower(): c for c in dfp.columns}
-            id_col = cols.get("id")
-            sym_col = cols.get("approvedsymbol") or cols.get("symbol") or cols.get("gene_symbol")
-            if id_col and sym_col:
-                tmp = (
-                    dfp[[id_col, sym_col]]
-                    .dropna()
-                    .drop_duplicates(subset=[id_col])
-                    .set_index(id_col)[sym_col]
-                    .to_dict()
-                )
-                id_to_symbol.update(tmp)
-
-    # 2) Reactome mapping file if available (broad coverage of human genes)
-    reactome_map = "data/Ensembl2Reactome_PE_All_Levels.txt"
-    if os.path.isfile(reactome_map):
+    for p in parts:
         try:
-            # File has 8 tab-separated columns; we use 1: ensembleID, 3: gene (name and aliases)
-            df_r = pd.read_csv(
-                reactome_map,
-                sep="\t",
-                header=None,
-                names=[
-                    "ensembleID",
-                    "geneID",
-                    "gene",
-                    "pathwayID",
-                    "url",
-                    "pathway_name",
-                    "evidence",
-                    "species",
-                ],
-                dtype=str,
-            )
-            df_r = df_r[df_r["species"] == "Homo sapiens"]
-            df_r["symbol"] = df_r["gene"].str.split(" ").str[0]
-            tmp = (
-                df_r[["ensembleID", "symbol"]]
-                .dropna()
-                .drop_duplicates(subset=["ensembleID"])
-                .set_index("ensembleID")["symbol"]
-                .to_dict()
-            )
-            # Don't overwrite symbols already present from Open Targets unless missing
-            for ens, sym in tmp.items():
-                if ens not in id_to_symbol:
-                    id_to_symbol[ens] = sym
+            dfp = pd.read_parquet(p)  # type: ignore[arg-type]
         except Exception:
-            pass
+            continue
+        cols = {c.lower(): c for c in dfp.columns}
+        id_col = cols.get("id")
+        sym_col = cols.get("approvedsymbol") or cols.get("symbol") or cols.get("gene_symbol")
+        if not id_col or not sym_col:
+            continue
+        tmp = (
+            dfp[[id_col, sym_col]]
+            .dropna()
+            .drop_duplicates(subset=[id_col])
+            .set_index(id_col)[sym_col]
+            .to_dict()
+        )
+        id_to_symbol.update(tmp)
 
-    # 3) Fallback to local two-column TSV mapping (limited subset)
-    try:
-        name_to_id_fallback = _load_two_column_tsv_to_map(gene_data_file)  # gene_name -> gene_id
-    except Exception:
-        name_to_id_fallback = {}
+    if not id_to_symbol:
+        raise ValueError(
+            "Could not build id->symbol map from target parquet. Ensure files have 'id' and a symbol column."
+        )
 
-    # Build final maps
-    # Merge fallback into id->symbol if invertible
-    for gname, gid in name_to_id_fallback.items():
-        if gid and gname and gid not in id_to_symbol:
-            id_to_symbol[gid] = gname
-
-    # Invert id->symbol to name->id
     name_to_id: Dict[str, str] = {}
     for gid, gname in id_to_symbol.items():
         if gname and gid and gname not in name_to_id:
@@ -142,19 +102,18 @@ def _load_disease_map(disease_data_file: str = "data/disease_data.txt") -> None:
 
 
 def _load_associations() -> None:
-    """Load disease-target association data into memory.
+    """Load disease-target association data into memory using configured sources.
 
-    Prefers parquet files under data/association_by_datatype_indirect/.
-    Falls back to TSV at data/input/auto-input/filtered_associations.tsv if present.
+    Priority: ASSOCIATIONS_DIR (parquet directory) → ASSOCIATIONS_TSV (single TSV) → error.
     """
     global DISEASE_ASSOC_DATA
     if DISEASE_ASSOC_DATA is not None:
         return
 
-    parquet_dir = "data/association_by_datatype_indirect"
-    tsv_fallback = "data/input/auto-input/filtered_associations.tsv"
+    parquet_dir = ASSOCIATIONS_DIR or os.environ.get("SID_ASSOCIATIONS_DIR")
+    tsv_fallback = ASSOCIATIONS_TSV or os.environ.get("SID_ASSOCIATIONS_TSV")
 
-    if os.path.isdir(parquet_dir):
+    if parquet_dir and os.path.isdir(parquet_dir):
         parts = [
             os.path.join(parquet_dir, f)
             for f in sorted(os.listdir(parquet_dir))
@@ -180,16 +139,13 @@ def _load_associations() -> None:
                     dfp = pd.read_parquet(p)  # type: ignore[arg-type]
             frames.append(dfp)
         df = pd.concat(frames, ignore_index=True)
-    elif os.path.isfile(tsv_fallback):
+    elif tsv_fallback and os.path.isfile(tsv_fallback):
         df = pd.read_csv(tsv_fallback, sep="\t", dtype={"diseaseId": str, "targetId": str})
         missing = {c for c in ["diseaseId", "targetId", "score"] if c not in df.columns}
         if missing:
             raise ValueError(f"Association TSV missing columns: {missing}")
     else:
-        raise FileNotFoundError(
-            "Could not locate association data. Expected parquet under "
-            f"{parquet_dir} or TSV at {tsv_fallback}"
-        )
+        raise FileNotFoundError("Association data not found. Provide --associations_dir or --associations_tsv (or set env).")
 
     # Keep only relevant columns
     needed_cols = ["diseaseId", "targetId", "score", "datatypeId"]
@@ -202,6 +158,16 @@ def load_data() -> None:
     _load_gene_maps()
     _load_disease_map()
     _load_associations()
+
+
+def configure_data_sources(associations_dir: Optional[str] = None,
+                           associations_tsv: Optional[str] = None,
+                           target_dir: Optional[str] = None) -> None:
+    """Configure data source locations for parquet/TSV inputs."""
+    global ASSOCIATIONS_DIR, ASSOCIATIONS_TSV, TARGET_DIR
+    ASSOCIATIONS_DIR = associations_dir or ASSOCIATIONS_DIR
+    ASSOCIATIONS_TSV = associations_tsv or ASSOCIATIONS_TSV
+    TARGET_DIR = target_dir or TARGET_DIR
 
 
 def validate_input(gene_name: str, disease_name: str) -> Tuple[str, str]:
@@ -311,8 +277,9 @@ def build_gsea_input_for_disease_id(disease_id: str, datatype: Optional[str] = N
 def _build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Prepare GSEA input (symbol, globalScore) for a disease")
     parser.add_argument("--gene_name", required=False, help="Primary target name (optional; validated if provided)")
-    parser.add_argument("--disease_name", required=False, help="Disease name as in data/disease_data.txt (optional)")
-    parser.add_argument("--disease_id", required=False, help="Disease EFO ID (e.g., EFO_0004248). Overrides --disease_name")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--disease_name", required=False, help="Disease name (requires data/disease_data.txt)")
+    group.add_argument("--disease_id", required=False, help="Disease EFO ID (e.g., EFO_0004248)")
     parser.add_argument(
         "--output",
         dest="output_tsv",
@@ -325,12 +292,23 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional association datatype filter, e.g. genetic_association",
     )
+    # Data source configuration
+    parser.add_argument("--associations_dir", default=None, help="Directory of association parquet parts")
+    parser.add_argument("--associations_tsv", default=None, help="Single TSV of associations (fallback)")
+    parser.add_argument("--target_dir", default=None, help="Directory of target parquet parts")
     return parser
 
 
 def main() -> None:
     parser = _build_arg_parser()
     args = parser.parse_args()
+
+    # Configure data sources from CLI (env fallbacks are used in loaders)
+    configure_data_sources(
+        associations_dir=args.associations_dir,
+        associations_tsv=args.associations_tsv,
+        target_dir=args.target_dir,
+    )
 
     # Validate inputs and load
     load_data()
