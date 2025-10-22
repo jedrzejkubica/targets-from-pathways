@@ -20,19 +20,13 @@ The aim of the project was to develop a disease-specific pathway assessment tool
 
 ## Introdution
 
-
-### TODO Initial plan:
-- validate_input(gene_symbol:str, disease_name:str)
-   - Validate and fetch gene ensembl_id and disease EFO_id
-- get_genes_associated_with_disease(disease_efo_id, data_source=None, score_threshold=None)
-- execute_gsea()
-- get_pathways_for_gene(ensembl_ids:List[str])
-- get_genes_for_pathway(pathway_id:List[str])
-- create_gene_matrix(ensembl_ids:List[str], pathway_ids:List[str])
-- GSEA
+- get genes associated with disease
+- get disease pathways using GSEA
+- get genes for disease pathways
+- get genes for target pathways
 - find all genes that are both disease-specific and on the same pathways as target
-- prioritze targets (network propagation? anothe scoring formula?)
-- parse reactome interactions and map new targets to pathways, visualize
+- prioritze targets (network propagation on reactome functional interaction network? anothe scoring formula?)
+- visualize pathways 
 
 
 ## How to use this repo
@@ -44,32 +38,20 @@ cd targets-from-pathways
 
 Prepare input data and run the pipeline as described below. See results in scores.tsv.
 
-### Dependencies and environment
+## Methods
 
-Set up a Python 3.10+ environment and install dependencies:
+### Data
 
-```
-pip install --upgrade pip
-pip install pandas blitzgsea networkx pyarrow
-```
+Place files in `data/` unless noted.
 
-Notes:
-- You can use `fastparquet` instead of `pyarrow`: `pip install fastparquet`.
-- blitzgsea: https://github.com/MaayanLab/blitzgsea
-
-### Required data (updated)
-
-Place files under `data/` unless noted.
-
-- Open Targets associations parquet (required)
+- Open Targets associations parquets (required)
   - Directory: `data/association_by_datatype_indirect/`
-  - Columns needed: `diseaseId`, `targetId`, `score` (optional: `datatypeId`).
-  - Source: Open Targets Platform release (e.g., 25.09) association by datasource indirect export.
+  - Columns needed: `diseaseId`, `targetId`, `score` (optional: `datatypeId`)
+  - Source: Open Targets Platform release (e.g., 25.09) association by datasource indirect export
 
-- Open Targets targets parquet (recommended)
+- Open Targets targets parquet (required)
   - Directory: `data/target/`
-  - Columns: `id`, `approvedSymbol`. Used to map Ensembl IDs to gene symbols.
-  - If missing, mapping falls back to Reactome mapping; otherwise to `data/gene_data.txt`.
+  - Columns: `id`, `approvedSymbol`. Used to map Ensembl IDs to gene symbols
 
 - Reactome files (for the final overlap/scoring step)
   - Mapping file (8-column TSV; includes `Homo sapiens` rows):
@@ -92,9 +74,6 @@ Place files under `data/` unless noted.
 - Reactome GMT for GSEA (required)
   - Place a `.gmt` file under `gsea/Reactome_2025/` or use an absolute path.
 
-- Optional helper maps
-  - `data/gene_data.txt` two-column TSV `gene_name<TAB>ensembl_id` (fallback mapping)
-  - `data/disease_data.txt` two-column TSV `disease_name<TAB>efo_id` (only needed if using disease names instead of EFO IDs)
 
 ### Step-by-step usage (updated)
 
@@ -177,10 +156,6 @@ Finally, we obtain a list of scored genes, the higher the score, the more likely
 ### Flowchart
 <img width="901" height="261" alt="Flow chart drawio" src="https://github.com/user-attachments/assets/df33bbc8-1842-4937-9062-806452cb6636" />
 
-### Data
-
-See the updated "Required data" section above for current inputs and exact download commands.
-
 
 ### Run pipeline
 
@@ -228,9 +203,9 @@ Long-term:
 - integrate pipeline within Open Targets Platform (https://platform.opentargets.org/)
 
 
-## Python environment
+### Python environment
 
-See "Dependencies and environment" above for required packages. Tools like multixrank may be used for future network propagation experiments (optional).
+required packages: networkx, pandas, blitzgsea (https://github.com/MaayanLab/blitzgsea), multixrank (https://github.com/anthbapt/multixrank)
 
 
 ## Special thank you to the Organizers of the Open Targets Hackathon!
