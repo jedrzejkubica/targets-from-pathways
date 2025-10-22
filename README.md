@@ -44,6 +44,128 @@ cd targets-from-pathways
 
 Prepare input data and run the pipeline as described below. See results in scores.tsv.
 
+### Dependencies and environment
+
+Set up a Python 3.10+ environment and install dependencies:
+
+```
+pip install --upgrade pip
+pip install pandas blitzgsea networkx pyarrow
+```
+
+Notes:
+- You can use `fastparquet` instead of `pyarrow`: `pip install fastparquet`.
+- blitzgsea: https://github.com/MaayanLab/blitzgsea
+
+### Required data (updated)
+
+Place files under `data/` unless noted.
+
+- Open Targets associations parquet (required)
+  - Directory: `data/association_by_datatype_indirect/`
+  - Columns needed: `diseaseId`, `targetId`, `score` (optional: `datatypeId`).
+  - Source: Open Targets Platform release (e.g., 25.09) association by datasource indirect export.
+
+- Open Targets targets parquet (recommended)
+  - Directory: `data/target/`
+  - Columns: `id`, `approvedSymbol`. Used to map Ensembl IDs to gene symbols.
+  - If missing, mapping falls back to Reactome mapping; otherwise to `data/gene_data.txt`.
+
+- Reactome files (for the final overlap/scoring step)
+  - Mapping file (8-column TSV; includes `Homo sapiens` rows):
+    - `data/Ensembl2Reactome_PE_All_Levels.txt`
+    - Download:
+      ```
+      curl -L -o data/Ensembl2Reactome_PE_All_Levels.txt \
+        https://download.reactome.org/94/Ensembl2Reactome_PE_All_Levels.txt
+      ```
+  - Functional interactions:
+    - `data/FIsInGene_04142025_with_annotations.txt` (from zip)
+    - Download and unzip:
+      ```
+      curl -L -o data/FIsInGene_04142025_with_annotations.txt.zip \
+        http://cpws.reactome.org/caBigR3WebApp2025/FIsInGene_04142025_with_annotations.txt.zip
+      unzip -o data/FIsInGene_04142025_with_annotations.txt.zip -d data
+      ```
+  - The `run.py` script can auto-download both if you pass `--auto_fetch` and use these default filenames.
+
+- Reactome GMT for GSEA (required)
+  - Place a `.gmt` file under `gsea/Reactome_2025/` or use an absolute path.
+
+- Optional helper maps
+  - `data/gene_data.txt` two-column TSV `gene_name<TAB>ensembl_id` (fallback mapping)
+  - `data/disease_data.txt` two-column TSV `disease_name<TAB>efo_id` (only needed if using disease names instead of EFO IDs)
+
+### Step-by-step usage (updated)
+
+Create an experiment folder (recommended):
+```
+mkdir -p experiments/my_experiment
+```
+
+1) Build GSEA input from Open Targets associations (prefer EFO directly)
+```
+python -m functions.sid \
+  --disease_id EFO_0004248 \
+  --datatype genetic_association \
+  --output experiments/my_experiment/final_gsea_input.tsv
+```
+Options (functions/sid.py):
+- `--disease_id EFO_...` (preferred) or `--disease_name "..."`
+- `--datatype` optional (e.g., `genetic_association`)
+- `--gene_name` optional (validated; not used to compute the input)
+
+2) Run GSEA and filter pathway IDs
+```
+python gsea/run_gsea.py \
+  experiments/my_experiment/final_gsea_input.tsv \
+  gsea/Reactome_2025/<your_file>.gmt \
+  --output experiments/my_experiment/gsea_results.tsv \
+  --output-ids experiments/my_experiment/gsea_ids.tsv \
+  --fdr-threshold 0.05 \
+  --nes-positive
+```
+Options (gsea/run_gsea.py):
+- `--pval-threshold` optional (e.g., `0.01`)
+- `--fdr-threshold` optional (e.g., `0.05`)
+- `--nes-positive` optional (require NES > 0)
+
+3) Reactome overlap/scoring
+```
+python run.py \
+  --pathway_mapping_file data/Ensembl2Reactome_PE_All_Levels.txt \
+  --interactions_file data/FIsInGene_04142025_with_annotations.txt \
+  --target ESR1 \
+  --gsea_ids_file experiments/my_experiment/gsea_ids.tsv \
+  --auto_fetch \
+  1>experiments/my_experiment/scores.tsv
+```
+Options (run.py):
+- `--gsea_ids_file` optional (defaults to legacy hardcoded path if omitted)
+- `--auto_fetch` optional (auto-downloads Reactome files if missing and default filenames used)
+- `--target` is required for this step
+
+### End-to-end (single command)
+
+```
+GMT="gsea/Reactome_2025/<your_file>.gmt"
+python main_script.py \
+  --disease_id EFO_0004248 \
+  --datatype genetic_association \
+  --gene_name ESR1 \
+  --gmt_file "$GMT" \
+  --experiment_dir experiments/my_experiment \
+  --fdr_threshold 0.05 --nes_positive \
+  --run_reactome --auto_fetch \
+  --pathway_mapping_file data/Ensembl2Reactome_PE_All_Levels.txt \
+  --interactions_file data/FIsInGene_04142025_with_annotations.txt
+```
+Outputs (in `experiments/my_experiment/`):
+- `final_gsea_input.tsv` (symbol, globalScore)
+- `gsea_results.tsv`
+- `gsea_ids.tsv` (filtered pathway IDs)
+- `scores.tsv` (overlap/scoring)
+
 
 ## Methods
 
@@ -56,75 +178,12 @@ Finally, we obtain a list of scored genes, the higher the score, the more likely
 
 ### Data
 
-Please, put all data files in a directory called `data/`
-
-> **_Note:_** All data files below are just test files with minimal data for our example target genes and disease
-
-- Gene metadata (gene_symbol, ensembl_id)  
-  This [file](data/gene_data.txt) serves as a mapping between gene symbols and their corresponding Ensembl IDs. It also helps to validate user input for gene symbols. The genes selected in this file are the top 5 genes associated with male infertility sorted by Chembl score. These genes would be used as input genes for our example.
-
-- Disease metadata (disease_name, disease_efo_id,)  
-  This [file](data/disease_data.txt) serves as a mapping between disease names and their corresponding EFO IDs. It also helps to validate user input for disease names.
-
-- Disease association by data source (disease_efo_id, ensembl_id, data_source, association_score)  
-  This [file](data/disease_association_data.txt) contains associations between diseases and genes, along with the data source and association score. It is used to fetch genes associated with a specific disease based on user-defined criteria.
-
-- Reactome pathway data from OT (pathway_id, pathway_name, ensembl_id)
-- Reactome pathway gene set from REACTOME
-- Reactome pathway interactions file
-
-Reactome gene-to-pathway mapping file:
-```
-wget https://download.reactome.org/94/Ensembl2Reactome_PE_All_Levels.txt
-```
-
-Reactome functional interaction file (see Wu et al., 2010) to build a functional interaction network:
-```
-wget http://cpws.reactome.org/caBigR3WebApp2025/FIsInGene_04142025_with_annotations.txt.zip
-```
+See the updated "Required data" section above for current inputs and exact download commands.
 
 
 ### Run pipeline
 
-Part 1:
-
-Use Pathway Targets Extractor (https://github.com/MaayanLab/blitzgsea), a Python module for Gene Set Enrichment Analysis, to extract pathway-target gene pairs.
-
-
-Part 2:
-
-main_script.py demonstrates how our final script should work. Please populate the remaining pipeline in the main script as required.
-
-```
-python main_script.py --gene_name="SLC22A11" --disease_name="male infertility"
-```
-
-Part 3:
-
-Parse Reactome gene-to-pathway mapping, outputs genes that are both disease-specific and on the same pathways as target (using "BTG4" for now as example)
-
-```
-python run.py --pathway_mapping_file data/Ensembl2Reactome_PE_All_Levels.txt --interactions_file data/FIsInGene_04142025_with_annotations.txt --target BTG4 1>scores.tsv
-```
-
-Part 4:
-
-For every gene found in the overlap between disease-specific and target-specific list:
-
-`score = (number of disease pathways containing the gene + number of target pathways containing the gene) / (total disease pathways + total target pathways)`
-
-Network propagation on the functional interaction network:
-
-use run.py (uncomment lines in main() if necessary) to generate interactions_reactome.tsv
-
-Run RWR:
-```
-prepare config.yml
-mkdir -p reactome/multiplex/1
-cp ~/open-targets-hackathon/targets-from-pathways/results/interactions_reactome.tsv
-prepare seeds.txt (target + disease genes same as for GSEA)
-python run_multirank.py (provided in this repo)
-```
+See the updated "Step-by-step usage" and "End-to-end" sections above.
 
 ## Results
 
@@ -170,11 +229,7 @@ Long-term:
 
 ## Python environment
 
-required packages:
-- networkx
-- pandas
-- blitzgsea (https://github.com/MaayanLab/blitzgsea)
-- multixrank (https://github.com/anthbapt/multixrank)
+See "Dependencies and environment" above for required packages. Tools like multixrank may be used for future network propagation experiments (optional).
 
 
 ## Special thank you to the Organizers of the Open Targets Hackathon!
