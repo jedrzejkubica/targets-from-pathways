@@ -7,9 +7,9 @@ The aim of the project was to develop a disease-specific pathway assessment tool
 
 ## Contributors
 - Jędrzej Kubica (jedrzej.kubica@univ-grenoble-alpes.fr)
+- Polina Rusina (polina@ebi.ac.uk)
 - Siddharth Sethi (sidharth.sethi@astx.com)
-- Polina
-- Elvis
+- Elvis Poku-Adusei (elvispokkad@yahoo.com)
 
 
 ## Introdution
@@ -43,6 +43,11 @@ Prepare input data and run the pipeline as described below. See results in score
 
 ### Flowchart
 
+We introduced a new methodology for target prioritization. The user inputs a disease and a target of interest (perhaps the medication for this target doesn't work). First, we get a gene list for the disease from Open Targets Platform (Associations - indirect (by data source) ; http://ftp.ebi.ac.uk/pub/databases/opentargets/platform/25.09/output/association_by_datasource_indirect) and perform GSEA using the blitzgsea Python package (https://github.com/MaayanLab/blitzgsea). We obtain pathways associated with the disease. Second, we find also all pathways with the target on it also using Reactome database (gene-to-pathway mapping ; https://download.reactome.org/94/Ensembl2Reactome_PE_All_Levels.txt). That's how we get pathways associated with the disease and the target and we find all genes that are on these pathways. The, we prioritize these genes as new potential targets for the disease by:
+- scoring using pathway selectivity (formula below)
+- scoring using network propagation (Random Walk with Restart, MutliXrank (Baptista et al, 2020) ; https://github.com/anthbapt/multixrank)
+Finally, we obtain a list of scored genes, the higher the score, the more likely it is to be associated with the disease and the target (based on pathways only).
+
 ### Data
 
 Please, put all data files in a directory called `data/`
@@ -67,7 +72,7 @@ Reactome gene-to-pathway mapping file:
 wget https://download.reactome.org/94/Ensembl2Reactome_PE_All_Levels.txt
 ```
 
-Reactome functional interaction file (see Wu et al., 2010):
+Reactome functional interaction file (see Wu et al., 2010) to build a functional interaction network:
 ```
 wget http://cpws.reactome.org/caBigR3WebApp2025/FIsInGene_04142025_with_annotations.txt.zip
 ```
@@ -96,14 +101,18 @@ Parse Reactome gene-to-pathway mapping, outputs genes that are both disease-spec
 python run.py --pathway_mapping_file data/Ensembl2Reactome_PE_All_Levels.txt --interactions_file data/FIsInGene_04142025_with_annotations.txt --target BTG4 1>scores.tsv
 ```
 
+Part 4:
+
 For every gene found in the overlap between disease-specific and target-specific list:
 
 `score = (number of disease pathways containing the gene + number of target pathways containing the gene) / (total disease pathways + total target pathways)`
 
+Network propagation on the functional interaction network:
+
 
 ## Results
 
-Here are top 10 genes we got in our study, using BTG4 as target:
+Here are top 10 genes based on pathway selectivity (using BTG4 as target):
 
 | Gene   | Score |
 |--------|--------|
@@ -123,17 +132,20 @@ Here are top 10 genes we got in our study, using BTG4 as target:
 Reactome functional interaction network:
 ![interactions_reactome](results/interactions_reactome.png)
 
+Here are top 10 genes based on network propagation (using x as seeds):
+
 
 ## Future directions
 
 Short-term:
-- refine scoring formula; efficy and safety (Target-PV)?
-- use [Reactome functional interaction network](targets-from-pathways/results/interactions_reactome.tsv) for interpretability
-- get insights about scoring of new targets
-- assess the method's performance
+- refine and test the pathway selectivity scoring formula
+- use [Reactome functional interaction network](targets-from-pathways/results/interactions_reactome.tsv) for network propagation
+- get insights about scoring of new targets, interpretability
+- assess the method's performance, compare with similar studies
 
 Long-term:
 - adapt for other target types (genes, proteins, miRNA)
+- use efficy and safety (Target-PV)
 - integrate within Open Targets Platform
 
 
@@ -144,3 +156,4 @@ required packages: networkx, pandas, blitzgsea (https://github.com/MaayanLab/bli
 
 ## References
 1. Wu, G., Feng, X. & Stein, L. A human functional protein interaction network and its application to cancer data analysis. Genome Biol 11, R53 (2010). https://doi.org/10.1186/gb-2010-11-5-r53
+2. Baptista, A., Gonzalez, A. & Baudot, A. Universal multilayer network exploration by random walk with restart. Commun Phys 5, 170 (2022). https://doi.org/10.1038/s42005-022-00937-9
