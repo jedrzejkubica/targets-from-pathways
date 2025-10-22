@@ -175,6 +175,7 @@ We introduced a new methodology for target prioritization. The user inputs a dis
 Finally, we obtain a list of scored genes, the higher the score, the more likely it is to be associated with the disease and the target (based on pathways only).
 
 ### Flowchart
+<img width="901" height="261" alt="Flow chart drawio" src="https://github.com/user-attachments/assets/df33bbc8-1842-4937-9062-806452cb6636" />
 
 ### Data
 
