@@ -32,6 +32,9 @@ def parse_target_parquet(target_parquets_dir):
                                 .set_index("id")[ "approvedSymbol"]
                                 .to_dict())
         target2symbol.update(parquet_target2symbol)
+
+    logger.info("Found %i target-symbol associations", len(target2symbol))
+
     return(target2symbol)
 
 
@@ -54,14 +57,16 @@ def parse_associations_parquet(associations_parquets_dir, disease, datatype):
             dfp = pandas.read_parquet(file, columns=["diseaseId", "targetId", "score", "datatypeId"])
         except Exception:
             logger.error("Cannot open parquet file %s", file)
-
-        df_filtered = dfp[(dfp["diseaseId"] == disease) and (dfp["datatypeId"] == datatype)]
+        
+        df_filtered = dfp[(dfp["diseaseId"] == disease) & (dfp["datatypeId"] == datatype)]
 
         parquet_target2score = (df_filtered[["targetId", "score"]]
-                                .drop_duplicates(subset=["id"])
+                                .drop_duplicates(subset=["targetId"])
                                 .set_index("targetId")[ "score"]
                                 .to_dict())
         target2score.update(parquet_target2score)
+
+    logger.info("Found %i target-score associations for %s", len(target2score), disease)
 
     return(target2score)
 

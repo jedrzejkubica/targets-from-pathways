@@ -63,7 +63,7 @@ def run_gsea(gsea_input, library_sets):
     return res_df
 
 
-def filter_pathways_by_pvalue(gsea_results, pval_threshold, fdr_threshold, nes_positive):
+def filter_pathways_by_pvalue(gsea_results, pval_threshold, fdr_threshold):
     """
     Filter GSEA results and return a list of pathway IDs
     """
@@ -77,27 +77,27 @@ def filter_pathways_by_pvalue(gsea_results, pval_threshold, fdr_threshold, nes_p
     # Apply FDR filter
     mask &= df["qval"] <= fdr_threshold
 
-    mask &= df["NES"] > 0
-
     gsea_results_filtered = df.loc[mask, ["ID"]].copy().rename(columns={"ID": "pathwayId"})
 
     return gsea_results_filtered
 
 
-def main(target_parquets_dir, associations_parquets_dir, disease, datatype, gmt_file, pval_threshold, fdr_threshold, nes_positive):
+def main(target_parquets_dir, associations_parquets_dir, disease, datatype, gmt_file, pval_threshold, fdr_threshold):
+    logger.info("Parsing parquet files")
     target2symbol = data_parser.parse_target_parquet(target_parquets_dir)
-
     target2score = data_parser.parse_associations_parquet(associations_parquets_dir, disease, datatype)
 
     # Build GSEA input
-    gsea_input = data_parser.build_gsea_input(target2symbol, target2score, disease, datatype)
+    logger.info("Building GSEA input")
+    gsea_input = data_parser.build_gsea_input(target2symbol, target2score)
     library_sets = data_parser.parse_gmt_file(gmt_file)
 
     # Run GSEA
+    logger.info("Running GSEA")
     gsea_results = run_gsea(gsea_input, library_sets)
 
     # Filter  pathways by p-value
-    gsea_results_filtered = filter_pathways_by_pvalue(gsea_results, pval_threshold, fdr_threshold, nes_positive)
+    gsea_results_filtered = filter_pathways_by_pvalue(gsea_results, pval_threshold, fdr_threshold)
 
     print(gsea_results_filtered)
 
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("--disease",
                         type=str,
                         required=True, 
-                        elp="Disease EFO ID")
+                        help="Disease EFO ID")
     parser.add_argument("--datatype",
                         type=str,
                         help="association datatype filter for GSEA, e.g. genetic_association")
@@ -144,9 +144,6 @@ if __name__ == "__main__":
     parser.add_argument("--fdr_threshold",
                         type=float,
                         help="FDR threshold for GSEA")
-    parser.add_argument("--nes_positive",
-                        action="store_true",
-                        help="If set, also require NES > 0 when filtering IDs")
 
     args = parser.parse_args()
 
@@ -157,8 +154,7 @@ if __name__ == "__main__":
             datatype=args.datatype,
             gmt_file=args.gmt_file,
             pval_threshold=args.pval_threshold,
-            fdr_threshold=args.fdr_threshold,
-            nes_positive=args.nes_positive)
+            fdr_threshold=args.fdr_threshold)
 
     except Exception as e:
         # details on the issue should be in the exception name, print it to stderr and die
