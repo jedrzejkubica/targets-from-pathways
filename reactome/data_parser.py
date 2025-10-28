@@ -12,8 +12,8 @@ def parse_pathway_mapping(pathway_mapping_file):
     - pathway_mapping_file
 
     returns:
-    - gene2pathways
-    - pathway2genes
+    - gene2pathways: dict, key=gene, value=list of pathways with gene
+    - pathway2genes: dict, key=pathway, value=list of genes on pathway
     """
     gene2pathways = {}
     pathway2genes = {}
@@ -51,7 +51,7 @@ def parse_pathway_mapping(pathway_mapping_file):
 
     f.close()
 
-    logger.info("Found %i genes in %i pathways", len(gene2pathways), len(pathway2genes))
+    logger.info("Found %i genes on %i pathways", len(gene2pathways), len(pathway2genes))
 
     return(gene2pathways, pathway2genes)
 
