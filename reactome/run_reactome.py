@@ -15,16 +15,16 @@ def get_disease_genes(pathway2genes, disease_pathways):
     Find all genes that are on disease-specific pathways
 
     arguments:
-    - pathway2genes
+    - pathway2genes: dict, key=pathway, value=list of genes
     - disease_pathways
     
     returns:
     - list of disease-specific genes
     """
     disease_genes = set()
+
     for path in disease_pathways:
         genes_on_path = pathway2genes[path]
-        logger.info("Found %i genes in %s", len(genes_on_path), path)
 
         for gene in genes_on_path:
             disease_genes.add(gene)
@@ -37,17 +37,17 @@ def get_target_genes(gene2pathways, pathway2genes, target):
     Find all genes that are on the same pathways as target
 
     arguments:
-    - gene2pathways
-    - pathway2genes
-    - target
+    - gene2pathways: dict, key=gene, value=list of pathways with gene
+    - pathway2genes: dict, key=pathway, value=list of genes on pathway
+    - target: str, gene name of the target of interest
     
     returns:
     - list of target-specific genes
     """
     target_genes = set()
 
-    all_paths = gene2pathways[target]
-    for path in all_paths:
+    target_paths = gene2pathways[target]
+    for path in target_paths:
         genes_on_path = pathway2genes[path]
         for gene in genes_on_path:
             target_genes.add(gene)
@@ -106,6 +106,7 @@ def main(pathway_mapping_file, disease_pathways_file, target):
 
     logger.info("Computing GSEA")
     disease_pathways = data_parser.parse_disease_pathways(disease_pathways_file)
+    logger.info("Found %i disease-specific pathways", len(disease_pathways))
     
     # Finding disease-specific and target-specific genes
     disease_genes = get_disease_genes(pathway2genes, disease_pathways)
