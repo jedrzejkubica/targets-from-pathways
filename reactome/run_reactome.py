@@ -69,18 +69,20 @@ def find_overlap(list1, list2):
 
 def calculate_scores(genes, gene2pathways, pathway2genes, disease_pathways, target):
     """
-    For every gene found in the overlap between disease-specific and target-specific list:
+    For every disease- and target-specific gene:
     score = (#disease_paths_with_gene + #target_paths_with_gene) / (#disese_paths + #target_paths)
 
     arguments:
-    - genes: list of genes from find_overlap
-    - gene2pathways
-    - 
+    - genes: list of disease- and target-specific genes
+    - gene2pathways: dict, key=gene, value=list of pathways with gene
+    - pathway2genes: dict, key=pathway, value=list of genes on pathway
+    - target: str, gene name of the target of interest
     
     returns:
     - scores: dict, key=gene, value=score
     """
     scores = {}
+
     for gene in genes:
         # #disease_paths_with_gene
         gene_paths = gene2pathways[gene]

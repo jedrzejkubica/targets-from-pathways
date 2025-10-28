@@ -57,6 +57,9 @@ def parse_pathway_mapping(pathway_mapping_file):
 
 
 def parse_disease_pathways(file):
+    '''
+    Parse significantly enriched pathways from GSEA, one pathway ID per line
+    '''
     list = []
     f = open(file, 'r')
 
@@ -64,8 +67,6 @@ def parse_disease_pathways(file):
         list.append(line.rstrip('\n'))
 
     f.close()
-
-    logger.info("Found %i disease-specific pathways", len(list))
 
     return(list)
 
