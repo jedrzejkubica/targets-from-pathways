@@ -10,7 +10,7 @@ lamb:
 multiplex:
     1:
         layers:
-            - multiplex/1/interactome_human.tsv
+            - interactions_reactome.tsv
         delta: 0.5
         # Graph type: unweighted/weighted, undirected/directed
         graph_type: [10]

@@ -9,17 +9,19 @@ import networkx
 # set up logger, using inherited config, in case we get called as a module
 logger = logging.getLogger(__name__)
 
+
 def parse_interactions(interactions_file):
     """
-    Parses Reactome file 
+    Parses Reactome TSV file with 5 tab-separated columns: Gene1, Gene2, Annotation, Direction, Score
+
+    creates directed functional interactions
 
     arguments:
-    - interactions_file: with 5 tab-separated columns
+    - interactions_file
 
     returns:
-    - interactions: list of tuples, directed functional interactions
+    - interactions: list of tuples
     """
-    interaction_types = set()
     interactions = []
     genes = set()
     
@@ -29,7 +31,7 @@ def parse_interactions(interactions_file):
         logger.error("Opening provided Reactome file %s: %s", interactions_file, e)
         raise Exception("Cannot open provided Reactome file")
     
-    # skip header
+    # header
     line = f.readline()
     if not line.startswith("Gene1\t"):
         logging.error("Reactome file %s is headerless? expecting headers but got %s",
@@ -37,7 +39,7 @@ def parse_interactions(interactions_file):
         raise Exception("Reactome file problem")
 
     for line in f:
-        split_line = line.rstrip('\n').split('\t')
+        split_line = line.rstrip().split('\t')
 
         if len(split_line) != 5:
             logger.error("Reactome file %s has bad line (not 5 tab-separated fields): %s",
@@ -46,7 +48,6 @@ def parse_interactions(interactions_file):
 
         (gene1, gene2, annotation, direction,  score) = split_line
 
-        interaction_types.add(annotation)
         if direction == "->":
             interactions.append((gene1, gene2))
         if direction == "<-":
@@ -74,11 +75,13 @@ def interactions_to_TSV(interactions):
 def main(interactions_file):
     logger.info("Parsing interactions file")
     interactions = parse_interactions(interactions_file)
+
     network = networkx.from_edgelist(interactions)
     logger.info("Built network with %i nodes and %i interactions", len(network.nodes()), len(network.edges()))
 
     logger.info("Printing interactions")
     interactions_to_TSV(interactions)
+
 
 if __name__ == "__main__":
     script_name = os.path.basename(sys.argv[0])
@@ -95,7 +98,7 @@ if __name__ == "__main__":
     )
     
     parser.add_argument('--interactions_file',
-                        help='From Reactome, see GitHub README',
+                        help='Reactome functional interaction file',
                         type=pathlib.Path,
                         required=True)
     
