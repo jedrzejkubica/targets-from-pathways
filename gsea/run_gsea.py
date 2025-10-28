@@ -122,22 +122,22 @@ if __name__ == "__main__":
     parser.add_argument("--target_parquets_dir",
                         type=pathlib.Path,
                         required=True,
-                        help="TODO")
+                        help="Path to Open Targets targets parquets")
     parser.add_argument("--associations_parquets_dir",
-                        type=str,
-                        default=None,
-                        help="TODO")
+                        type=pathlib.Path,
+                        required=True,
+                        help="Path to Open Targets associations parquets")
     parser.add_argument("--disease",
                         type=str,
-                        required=True, 
+                        required=True,
                         help="Disease EFO ID")
     parser.add_argument("--datatype",
                         type=str,
                         help="association datatype filter for GSEA, e.g. genetic_association")
     parser.add_argument("--gmt_file",
-                        type=str,
+                        type=pathlib.Path,
                         required=True,
-                        help="Path to Reactome GMT file (e.g., gsea/Reactome_2025/<file>.gmt)")
+                        help="Path to Reactome GMT file")
     parser.add_argument("--pval_threshold",
                         type=float,
                         help="p-value threshold for GSEA")
