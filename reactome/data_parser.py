@@ -9,7 +9,7 @@ def parse_pathway_mapping(pathway_mapping_file):
     Maps genes to pathways and vice versa
 
     arguments:
-    - pathway_mapping_file, no header
+    - pathway_mapping_file
 
     returns:
     - gene2pathways
@@ -70,57 +70,6 @@ def parse_disease_pathways(file):
     return(list)
 
 
-def parse_interactions(interactions_file):
-    """
-    Parses Reactome file 
-
-    arguments:
-    - interactions_file: with 5 tab-separated columns
-
-    returns:
-    - interactions: list of tuples, directed functional interactions
-    """
-    interaction_types = set()
-    interactions = []
-    genes = set()
-    
-    try:
-        f = open(interactions_file, 'r')
-    except Exception as e:
-        logger.error("Opening provided Reactome file %s: %s", interactions_file, e)
-        raise Exception("Cannot open provided Reactome file")
-    
-    # skip header
-    line = f.readline()
-    if not line.startswith("Gene1\t"):
-        logging.error("Reactome file %s is headerless? expecting headers but got %s",
-                      interactions_file, line)
-        raise Exception("Reactome file problem")
-
-    for line in f:
-        split_line = line.rstrip('\n').split('\t')
-
-        if len(split_line) != 5:
-            logger.error("Reactome file %s has bad line (not 5 tab-separated fields): %s",
-                         interactions_file, line)
-            raise Exception("Bad line in the Reactome file")
-
-        (gene1, gene2, annotation, direction,  score) = split_line
-
-        interaction_types.add(annotation)
-        if direction == "->":
-            interactions.append((gene1, gene2))
-        if direction == "<-":
-            interactions.append((gene2, gene1))
-        
-        genes.add(gene1)
-        genes.add(gene2)
-
-    f.close()
-
-    return(interactions)
-
-
 def scores_to_TSV(scores):
     '''
     Print scores to stdout in TSV format, 2 columns: gene_name score
@@ -133,14 +82,3 @@ def scores_to_TSV(scores):
 
     for (gene, score) in sorted(scores.items()):
         print(gene + "\t" + str(score))
-
-
-def interactions_to_TSV(interactions):
-    '''
-    Print interactions to stdout in TSV format, 2 columns: gene1, gene2
-
-    arguments:
-    - interactions: list of directed functional interactions
-    '''
-    for interaction in interactions:
-        print(interaction[0] + "\t" + interaction[1])

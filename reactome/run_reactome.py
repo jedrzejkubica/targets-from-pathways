@@ -4,8 +4,6 @@ import logging
 import argparse
 import pathlib
 
-import networkx
-
 import data_parser
 
 # set up logger, using inherited config, in case we get called as a module
@@ -101,13 +99,12 @@ def calculate_scores(genes, gene2pathways, pathway2genes, disease_pathways, targ
     return(scores)
 
 
-def main(pathway_mapping_file, disease_pathways_file, interactions_file, target):
+def main(pathway_mapping_file, disease_pathways_file, target):
 
     logger.info("Parsing gene-to-pathway mapping file")
     (gene2pathways, pathway2genes) = data_parser.parse_pathway_mapping(pathway_mapping_file)
 
     logger.info("Computing GSEA")
-    # Read list of enriched pathways from provided override or legacy default
     disease_pathways = data_parser.parse_disease_pathways(disease_pathways_file)
     
     # Finding disease-specific and target-specific genes
@@ -125,17 +122,6 @@ def main(pathway_mapping_file, disease_pathways_file, interactions_file, target)
     scores = calculate_scores(disease_and_target_genes, gene2pathways, pathway2genes, disease_pathways, target)
     data_parser.scores_to_TSV(scores)
 
-    # Network propagation
-    logger.info("Parsing interactions file")
-    interactions = data_parser.parse_interactions(interactions_file)
-    network = networkx.from_edgelist(interactions)
-    logger.info("Built network with %i nodes and %i interactions", len(network.nodes()), len(network.edges()))
-
-    # logger.info("Printing interactions")
-    # data_parser.interactions_to_TSV(interactions)
-
-    # Visualization
-
 
 if __name__ == "__main__":
     script_name = os.path.basename(sys.argv[0])
@@ -152,20 +138,13 @@ if __name__ == "__main__":
     )
     
     parser.add_argument('--pathway_mapping_file',
-                        help='From Reactome, see GitHub README',
+                        help='Path to pathway mapping file from Reactome, no header',
                         type=pathlib.Path,
                         required=True)
-    
     parser.add_argument('--disease_pathways_file',
-                        help='Significantly enriched pathways from GSEA, one pathway ID per line',
+                        help='Path to file with significantly enriched pathways from GSEA, one pathway per line, no header',
                         type=pathlib.Path,
                         required=True)
-
-    parser.add_argument('--interactions_file',
-                        help='From Reactome, see GitHub README',
-                        type=pathlib.Path,
-                        required=True)
-
     parser.add_argument('--target',
                         help='target gene name',
                         type=str,
@@ -176,7 +155,6 @@ if __name__ == "__main__":
     try:
         main(pathway_mapping_file=args.pathway_mapping_file,
              disease_pathways_file=args.disease_pathways_file,
-             interactions_file=args.interactions_file,
              target=args.target)
 
     except Exception as e:
