@@ -45,17 +45,25 @@ def parse_associations_parquet(associations_parquets_dir, disease, datatype):
     """
     Parses associations parquet files from Open Targets Platform with 4 columns:
     disease_id, datatype, score, target_id
+    Filter on disease and datatype
+    More on the association scores:
+    https://platform.opentargets.org/downloads/association_by_datasource_indirect/schema
 
     arguments:
     - associations_parquets_dir: directory to Open Targets associations parquets
 
     return:
-    - target2score: dict, key=target ID, value=score
+    - target2score: dict, key=target, value=association score
     """
     target2score = {}
+    parquet_files = []
 
-    parquets = [os.path.join(associations_parquets_dir, f) for f in sorted(os.listdir(associations_parquets_dir)) if f.endswith(".parquet") or f.endswith(".snappy.parquet")]
-    for file in parquets:
+    for f in os.listdir(associations_parquets_dir):
+        if f.endswith(".parquet") or f.endswith(".snappy.parquet"):
+            parquet_file = os.path.join(associations_parquets_dir, f)
+            parquet_files.append(parquet_file)
+
+    for file in parquet_files:
         try:
             dfp = pandas.read_parquet(file, columns=["diseaseId", "targetId", "score", "datatypeId"])
         except Exception:
