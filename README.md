@@ -8,7 +8,7 @@
 </p>
 
 
-The aim of the project was to develop a disease-specific pathway assessment tool. We built a bioinformatics workflow that uses an associated target and disease-specific biological pathways to find novel targets implicated in disease. This tool can help researchers understand the biological pathways underlying disease and identify novel intervention points considering both efficacy and safety profiles along with target tractability. Here we present a prototype developed during the hackathon.
+The aim of the project was to develop a disease-specific and pathway-based target assessment tool. We built a bioinformatics workflow that uses a target of interest and disease-specific biological pathways to find novel targets implicated in disease. This tool can help researchers understand biological pathways underlying disease and identify novel intervention points considering both efficacy and safety profiles along with target tractability. Here we present a prototype developed during the hackathon.
 
 
 ## Contributors
@@ -20,14 +20,9 @@ The aim of the project was to develop a disease-specific pathway assessment tool
 
 ## Introdution
 
-Initial plan:
-- get genes associated with disease
-- get disease pathways using GSEA
-- get genes for disease pathways
-- get genes for target pathways
-- find all genes that are both disease-specific and on the same pathways as target
-- prioritze targets (network propagation on reactome functional interaction network? anothe scoring formula?)
-- visualize pathways 
+We celebrated a decade of the Open Targets Platform (https://platform.opentargets.org/) for drug target identification and prioritisation at the Open Targets Hackathon on October 21-22, 2025. We imagined a scenario where a researcher is investigating a patient for whom the therapy acting on a specific target is failing. This necessitates finding alternative or compensatory targets that would make the treatment effective. Pathways are rich source of information for such a study: interacting proteins are likely to be participating in the same molecular processes, therefore we aimed to add an additional line of evidence for the identification of alternative targets based only on biological pathways.
+
+We began by retrieving genes that are already associated with the disease from the Open Targets Platform. We then perform Gene Set Enrichment Analysis (GSEA) to identify pathways relevant to the disease. From these pathways, we collect all genes to define the broader disease-associated pathway context. At the same time, we extract all genes involved in the biological pathways with the target of interest. We then identify the intersection of disease- and pathway-specific genes, representing target candidates that can function within the same molecular processes, potentially compansating for the failing target. These candidates are prioritised using a scoring strategy: pathway selectivity or network propagation on the functional interaction network from Reactome.
 
 
 ## How to use this repo
