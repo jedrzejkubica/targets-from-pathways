@@ -84,10 +84,10 @@ def parse_associations_parquet(associations_parquets_dir, disease, datatype):
 
 def build_gsea_input(target2symbol, target2score):
     """
-    Create GSEA input
+    Create GSEA input as specified here: https://github.com/MaayanLab/blitzgsea
 
     arguments:
-    - target2symbol: dict, key=target ID, value=approved symbol
+    - target2symbol: dict, key=target, value=approved symbol
     - target2score: dict, key=target, value=association score
 
     returns:
