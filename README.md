@@ -80,7 +80,7 @@ How to download:
 During the hackathon we focused on male infertiltiy (EFO_0004248) and ESR1 as the target of interest.
 We assume that all files are downloaded into a folder called `data/`.
 
-1) Gene Set Enrichment Analysis (GSEA):
+1) Gene Set Enrichment Analysis (GSEA): Find pathways associated with the disease
 ```
 cd gsea
 ```
@@ -91,29 +91,46 @@ python run_gsea.py --target_parquets_dir ../data/target/ --associations_parquets
 
 NOTE: `--pval_threshold` and `--fdr_threshold` are user-specified parameters for filtering GSEA results based on statistical significance. Only results with a p-value less <= threshold are kept. Only results with FDR <= threshold are kept.
 
-2) Pathway-based scoring:
+2) Pathway-based scoring: 
+
+Pathway selectivity scores genes based on how frequently they co-occur in pathways associated with the disease and the specified target. For each gene:
+
+`score = (total number of disease pathways + total number of target pathways) / (#disease pathways containing the gene + #target pathways containing the gene)`
 ```
 cd reactome
 ```
 
 ```
-python run_reactome.py --pathway_mapping_file ../data/Ensembl2Reactome_PE_All_Levels.txt --disease_pathways_file ../gsea/disease_pathways.txt --interactions_file ../data/FIsInGene_04142025_with_annotations.txt --target ESR1 1>scores.tsv
+python run_reactome.py --pathway_mapping_file ../data/Ensembl2Reactome_PE_All_Levels.txt --disease_pathways_file ../gsea/disease_pathways.txt --target ESR1 1>scores.tsv
 ```
+The scores will be saved to: scores.tsv
 
 3) Network propagation scoring:
 ```
 cd network_propagation
 ```
 
-TODO run multixrank
+Build a Reactome functional interaction network:
+```
+python parse_interactions.py --interactions_file ../data/FIsInGene_04142025_with_annotations.txt 1>interactions_reactome.tsv
+```
+
+Before running MultiXrank:
+- create seeds.txt: one target per line (e.g., disease genes)
+- modify config.yml as specified in https://github.com/anthbapt/multixrank
+
+run MultiXrank:
+```
+python run_multixrank.py
+```
+The scores will be saved to: output/multiplex_1.tsv
 
 
 ## Results
 
-We found 12 significantly enriched pathways for male infertiltiy (EFO_0004248) and ESR1.
+Part 1. Pathway-based scoring
 
-
-Here are top 10 genes based on pathway selectivity (using ESR1 as target as example):
+We found 13 disease-specific pathways for male infertiltiy (EFO_0004248). We found 5217 genes that are both disease-specific and on the same pathways as target (ESR1). Here are top 10 genes based on pathway selectivity:
 
 | GENE          | SCORE      |
 |---------------|------------|
@@ -128,12 +145,27 @@ Here are top 10 genes based on pathway selectivity (using ESR1 as target as exam
 | UBC(229-304)  | 0.4666666666666667 |
 
 
-Reactome functional interaction network:
+Part 2. Network propagation scoring
+
+Reactome functional interaction network with 8114 genes and 70163 directed interactions:
 ![interactions_reactome](figures/interactions_reactome.png)
 
-Here are top 10 genes based on network propagation (using ESR1 + disease genes as seeds):
+Here are top 10 genes based on network propagation (using target ESR1 as seed):
+| GENE    | SCORE  |
+|---------|--------|
+| ESR1    | 0.50   |
+| MAPK14  | 0.01   |
+| MAPK11  | 0.01   |
+| PIAS1   | 0.01   |
+| MAPK3   | 0.01   |
+| SP3     | 0.01   |
+| USF1    | 0.01   |
+| MAPK1   | 0.01   |
+| MYD88   | 0.01   |
+| IL1RAP  | 0.01   |
 
-TODO run multixrank
+
+NOTE: These results are generated for the purpose of the hackathon. Use more seeds (e.g., target ESR1 + disease genes) for more relevant results
 
 
 ## Future directions
@@ -164,3 +196,4 @@ required packages: networkx, pandas, blitzgsea (https://github.com/MaayanLab/bli
 ## References
 1. Wu, G., Feng, X. & Stein, L. A human functional protein interaction network and its application to cancer data analysis. Genome Biol 11, R53 (2010). https://doi.org/10.1186/gb-2010-11-5-r53
 2. Baptista, A., Gonzalez, A. & Baudot, A. Universal multilayer network exploration by random walk with restart. Commun Phys 5, 170 (2022). https://doi.org/10.1038/s42005-022-00937-9
+3. Alexander Lachmann, Zhuorui Xie, Avi Ma’ayan, blitzGSEA: efficient computation of gene set enrichment analysis through gamma distribution approximation, Bioinformatics, Volume 38, Issue 8, March 2022, Pages 2356–2357, https://doi.org/10.1093/bioinformatics/btac076
