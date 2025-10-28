@@ -86,6 +86,10 @@ def build_gsea_input(target2symbol, target2score):
     """
     Create GSEA input
 
+    arguments:
+    - target2symbol: dict, key=target ID, value=approved symbol
+    - target2score: dict, key=target, value=association score
+
     returns:
     - gsea_input: DataFrame with two columns: symbol, score
     """
@@ -104,16 +108,27 @@ def build_gsea_input(target2symbol, target2score):
 
 def parse_gmt_file(gmt_file):
     """
-    Parse a GMT file into a dict mapping term name to list of genes.
-    The format is: term<TAB>description<TAB>gene1<TAB>gene2<...>
+    Parse a GMT file with columns: term_name, description, gene1, gene2, ...
+
+    returns:
+    - pathways: dict, key=term_name, key=list of genes
     """
+    pathways = {}
+
     with open(gmt_file, "r") as f:
-        return {
-            parts[0]: parts[2:]
-            for line in f
-            if (parts := line.strip().split("\t")) and len(parts) > 2
-        }
-    
+        for line in f:
+            split_line = line.rstrip("\n").split("\t")
+
+            if len(split_line) != 3:
+                logger.error("GMT file %s has bad line: %s", gmt_file, line)
+                raise Exception("Bad line in the GMT file")
+
+            term_name = split_line[0]
+            genes = split_line[2:]
+            pathways[term_name] = genes
+
+    return pathways
+
 
 def pathways_to_TSV(pathways):
     '''
