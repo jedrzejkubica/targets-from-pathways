@@ -18,9 +18,14 @@ def parse_target_parquet(target_parquets_dir):
     - target2symbol: dict, key=target ID, value=approved symbol
     """
     target2symbol = {}
+    parquet_files = []
 
-    parquets = [os.path.join(target_parquets_dir, f) for f in os.listdir(target_parquets_dir) if f.endswith(".parquet") or f.endswith(".snappy.parquet")]
-    for file in parquets:
+    for f in os.listdir(target_parquets_dir):
+        if f.endswith(".parquet") or f.endswith(".snappy.parquet"):
+            parquet_file = os.path.join(target_parquets_dir, f)
+            parquet_files.append(parquet_file)
+
+    for file in parquet_files:
         try:
             dfp = pandas.read_parquet(file, columns=["id", "approvedSymbol"])
         except Exception:
