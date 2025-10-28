@@ -117,10 +117,10 @@ def parse_gmt_file(gmt_file):
 
     with open(gmt_file, "r") as f:
         for line in f:
-            split_line = line.rstrip("\n").split("\t")
+            split_line = line.rstrip().split('\t')
 
-            if len(split_line) != 3:
-                logger.error("GMT file %s has bad line: %s", gmt_file, line)
+            if len(split_line) < 2:
+                logger.error("GMT file %s has bad line: %s", gmt_file, split_line)
                 raise Exception("Bad line in the GMT file")
 
             term_name = split_line[0]
