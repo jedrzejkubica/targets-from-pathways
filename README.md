@@ -37,7 +37,7 @@ Prepare input data and run the pipeline as described below. See results in `scor
 
 ## Methods
 
-We introduced a new methodology for target prioritization. The user inputs a disease and a target of interest. First, we get a gene list for the disease from Open Targets Platform (https://platform.opentargets.org/) and perform fast Gene Set Enrichment Analysis (GSEA) using the blitzgsea Python package (https://github.com/MaayanLab/blitzgsea). We obtain pathways associated with the disease. Second, we find all pathways with the target on it also using Reactome database. That's how we get pathways associated with the disease and the target, and we find all genes that are on these pathways. Then, we prioritize these genes as new potential targets for the disease using pathway selectivity and network propagation (Random Walk with Restart, MutliXrank (Baptista et al, 2020) ; https://github.com/anthbapt/multixrank). Finally, we obtain a list of scored genes, the higher the score, the more likely it is to be associated with the disease and the target (based on pathways and network propagation).
+We introduced a new methodology for target prioritization based only on biological pathways. The user provides a disease and a target of interest. First, we retrieve genes for the disease from the Open Targets Platform (https://platform.opentargets.org/) and perform Gene Set Enrichment Analysis (GSEA) using the blitzgsea Python package (https://github.com/MaayanLab/blitzgsea) to obtain pathways associated with the disease. Then, we find all pathways containing the specified target in the Reactome database. By intersecting the disease- and the target-associated pathways, we obtain a set of genes that are both relevant to the disease and proximal to the original target within the pathway network. We then prioritize these genes as new candidates using pathway selectivity and network propagation (Random Walk with Restart, MutliXrank (Baptista et al, 2020) ; https://github.com/anthbapt/multixrank). The output is a ranking of genes, where the higher the score, the more likely the gene is to be associated with the disease.
 
 
 ### Flowchart
@@ -46,13 +46,7 @@ We introduced a new methodology for target prioritization. The user inputs a dis
 
 ### Data
 
-Create data/ folder
-```
-mkdir data
-cd data/
-```
-
-Download to data/:
+How to download:
 - Open Targets associations parquets, source: Open Targets Platform (Associations - indirect (by data source))
   ```
   wget --recursive --no-parent --no-host-directories --cut-dirs 6 ftp://ftp.ebi.ac.uk/pub/databases/opentargets/platform/25.09/output/association_by_datasource_indirect .
@@ -83,16 +77,19 @@ Download to data/:
 
 ### Run pipeline
 
-During the hackathon we focused on male infertiltiy (EFO_0004248) and ESR1 as target of interest. 
+During the hackathon we focused on male infertiltiy (EFO_0004248) and ESR1 as the target of interest.
+We assume that all files are downloaded into a folder called `data/`.
 
-1) GSEA:
+1) Gene Set Enrichment Analysis (GSEA):
 ```
 cd gsea
 ```
 
 ```
-python run_gsea.py --target_parquets_dir ../data/target/ --associations_parquets_dir ../data/association_by_datasource_indirect/ --disease EFO_0004248 --datatype genetic_association --gmt_file ../data/ReactomePathways_merged.gmt --pval_threshold 0.05 --fdr_threshold 1 1>enriched_pathways.txt
+python run_gsea.py --target_parquets_dir ../data/target/ --associations_parquets_dir ../data/association_by_datasource_indirect/ --disease EFO_0004248 --datatype genetic_association --gmt_file ../data/ReactomePathways_merged.gmt --pval_threshold 0.05 --fdr_threshold 1 1>disease_pathways.txt
 ```
+
+NOTE: `--pval_threshold` and `--fdr_threshold` are user-specified parameters for filtering GSEA results based on statistical significance. Only results with a p-value less <= threshold are kept. Only results with FDR <= threshold are kept.
 
 2) Pathway-based scoring:
 ```
@@ -112,6 +109,9 @@ TODO run multixrank
 
 
 ## Results
+
+We found 12 significantly enriched pathways for male infertiltiy (EFO_0004248) and ESR1.
+
 
 Here are top 10 genes based on pathway selectivity (using ESR1 as target as example):
 
