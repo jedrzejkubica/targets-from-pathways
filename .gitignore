@@ -1,4 +1,8 @@
 .vscode
 *__pycache__*
+
 data/
+
 network_propagation/multixrank
+
+validation/data/
