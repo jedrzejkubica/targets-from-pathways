@@ -24,6 +24,9 @@ def get_disease_genes(pathway2genes, disease_pathways):
     disease_genes = set()
 
     for path in disease_pathways:
+        if path not in pathway2genes:
+            logger.warning("Pathway %s not found in pathway2genes mapping", path)
+            continue
         genes_on_path = pathway2genes[path]
 
         for gene in genes_on_path:
@@ -106,7 +109,7 @@ def main(pathway_mapping_file, disease_pathways_file, target):
     logger.info("Parsing gene-to-pathway mapping file")
     (gene2pathways, pathway2genes) = data_parser.parse_pathway_mapping(pathway_mapping_file)
 
-    logger.info("Computing GSEA")
+    logger.info("Parsing GSEA results")
     disease_pathways = data_parser.parse_disease_pathways(disease_pathways_file)
     logger.info("Found %i disease-specific pathways", len(disease_pathways))
     
