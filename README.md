@@ -8,7 +8,7 @@
 </p>
 
 
-The aim of the project was to develop a disease-specific and pathway-based target assessment tool. We built a bioinformatics workflow that uses a target of interest and disease-specific biological pathways to find novel targets implicated in disease. This tool can help researchers understand biological pathways underlying disease and identify novel intervention points considering both efficacy and safety profiles along with target tractability. Here we present a prototype developed during the hackathon.
+The aim of the project was to develop a disease-specific and pathway-based target assessment tool. We built a bioinformatics workflow that uses a target of interest and disease-specific biological pathways to find alternative targets for treatments. This tool can help researchers understand biological pathways underlying disease and identify promising intervention points considering both efficacy and safety profiles along with target tractability.
 
 
 ## Contributors
@@ -20,9 +20,20 @@ The aim of the project was to develop a disease-specific and pathway-based targe
 
 ## Introdution
 
-We celebrated a decade of the Open Targets Platform (https://platform.opentargets.org/) for drug target identification and prioritisation at the Open Targets Hackathon on October 21-22, 2025. We imagined a scenario where a researcher is investigating a patient for whom the therapy acting on a specific target is failing. This necessitates finding alternative or compensatory targets that would make the treatment effective. Pathways are rich source of information for such a study: interacting proteins are likely to be participating in the same molecular processes, therefore we aimed to add an additional line of evidence for the identification of alternative targets based only on biological pathways.
+We celebrated a decade of the Open Targets Platform (https://platform.opentargets.org/) for drug target identification and prioritisation at the Open Targets Hackathon on October 21-22, 2025. We imagined a scenario where a researcher is investigating a patient for whom the therapy acting on a specific target is failing. This necessitates finding alternative or compensatory targets that would make the treatment effective.
 
-We began by retrieving genes that are already associated with the disease from the Open Targets Platform. We then perform Gene Set Enrichment Analysis (GSEA) to identify pathways relevant to the disease. From these pathways, we collect all genes to define the broader disease-associated pathway context. At the same time, we extract all genes involved in the biological pathways with the target of interest. We then identify the intersection of disease- and pathway-specific genes, representing target candidates that can function within the same molecular processes, potentially compansating for the failing target. These candidates are prioritised using a scoring strategy: pathway selectivity or network propagation on the functional interaction network from Reactome.
+Biological pathways are rich source of information for such a study, therefore we aimed to add an additional line of evidence for the identification of alternative targets based only on pathways.
+
+The pipeline begins by retrieving genes that are already associated with the disease from the Open Targets Platform. We it performs Gene Set Enrichment Analysis (GSEA) to identify pathways relevant to the disease. From these pathways, it retrieves all genes to define a broader disease-associated pathway context. At the same time, it extracts all genes involved in the pathways that have the target of interest. It then finds the intersection of disease- and pathway-specific genes, which represents alternative target candidates that can function within the same molecular processes and disease. These candidates are prioritised using a scoring strategy.
+
+
+## Methods
+
+We introduced a new methodology for target prioritization based only on biological pathways. The user provides a disease and a target of interest. First, the pipeline finds disease-associated genes using the Open Targets Platform (https://platform.opentargets.org/) and performs Gene Set Enrichment Analysis (GSEA) using the blitzgsea Python package (https://github.com/MaayanLab/blitzgsea). Genes are prioritezed using pathway selectivity formula (described below) and network propagation (Random Walk with Restart, MutliXrank (Baptista et al, 2020) ; https://github.com/anthbapt/multixrank). The output is a ranking of genes, where the higher the score, the more likely the gene is going to serve as alternative treatment.
+
+
+### Flowchart
+<img width="901" height="261" alt="Flow chart drawio" src="https://github.com/user-attachments/assets/df33bbc8-1842-4937-9062-806452cb6636" />
 
 
 ## How to use this repo
@@ -32,21 +43,14 @@ git clone git@github.com:jedrzejkubica/targets-from-pathways.git
 cd targets-from-pathways
 ```
 
-Prepare input data and run the pipeline as described below. See results in `scores.tsv`.
-
-
-## Methods
-
-We introduced a new methodology for target prioritization based only on biological pathways. The user provides a disease and a target of interest. First, we retrieve genes for the disease from the Open Targets Platform (https://platform.opentargets.org/) and perform Gene Set Enrichment Analysis (GSEA) using the blitzgsea Python package (https://github.com/MaayanLab/blitzgsea) to obtain pathways associated with the disease. Then, we find all pathways containing the specified target in the Reactome database. By intersecting the disease- and the target-associated pathways, we obtain a set of genes that are both relevant to the disease and proximal to the original target within the pathway network. We then prioritize these genes as new candidates using pathway selectivity and network propagation (Random Walk with Restart, MutliXrank (Baptista et al, 2020) ; https://github.com/anthbapt/multixrank). The output is a ranking of genes, where the higher the score, the more likely the gene is to be associated with the disease.
-
-
-### Flowchart
-<img width="901" height="261" alt="Flow chart drawio" src="https://github.com/user-attachments/assets/df33bbc8-1842-4937-9062-806452cb6636" />
-
-
 ### Data
 
-How to download:
+Prepare input data and run the pipeline as described below. We assume that all files are downloaded into `data/`.
+
+```
+mkdir data
+```
+
 - Open Targets associations parquets, source: Open Targets Platform (Associations - indirect (by data source))
   ```
   wget --recursive --no-parent --no-host-directories --cut-dirs 6 ftp://ftp.ebi.ac.uk/pub/databases/opentargets/platform/25.09/output/association_by_datasource_indirect .
@@ -77,35 +81,41 @@ How to download:
 
 ### Run pipeline
 
-During the hackathon we focused on male infertiltiy (EFO_0004248) and ESR1 as the target of interest.
-We assume that all files are downloaded into a folder called `data/`.
+In the instructions below we use an example: rheumatic disease (EFO_0005755) and PTGS2 as the target of interest.
 
 1) Gene Set Enrichment Analysis (GSEA): Find pathways associated with the disease
-```
-cd gsea
-```
 
 ```
-python run_gsea.py --target_parquets_dir ../data/target/ --associations_parquets_dir ../data/association_by_datasource_indirect/ --disease EFO_0004248 --datatype genetic_association --gmt_file ../data/ReactomePathways_merged.gmt --pval_threshold 0.05 --fdr_threshold 1 1>disease_pathways.txt
+python gsea/run_gsea.py \
+  --target_parquets_dir data/target/ \
+  --associations_parquets_dir data/association_by_datasource_indirect/ \
+  --disease EFO_0005755 \
+  --datatype genetic_association \
+  --gmt_file data/ReactomePathways_merged.gmt \
+  --pval_threshold 0.05 \
+  --fdr_threshold 1 \
+  1>disease_pathways.txt
 ```
 
 NOTE: `--pval_threshold` and `--fdr_threshold` are user-specified parameters for filtering GSEA results based on statistical significance. Only results with a p-value less <= threshold are kept. Only results with FDR <= threshold are kept.
 
 2) Pathway-based scoring: 
 
-Pathway selectivity scores genes based on how frequently they co-occur in pathways associated with the disease and the specified target. For each gene:
+For each gene the score is calculated as follows:
 
 `score = (total number of disease pathways + total number of target pathways) / (#disease pathways containing the gene + #target pathways containing the gene)`
-```
-cd reactome
-```
+
+Pathway selectivity scores genes based on how frequently they occur in both pathways associated with the disease and the specified target. 
 
 ```
-python run_reactome.py --pathway_mapping_file ../data/Ensembl2Reactome_PE_All_Levels.txt --disease_pathways_file ../gsea/disease_pathways.txt --target ESR1 1>scores.tsv
+python reactome/run_reactome.py \
+  --pathway_mapping_file data/Ensembl2Reactome_PE_All_Levels.txt \
+  --disease_pathways_file disease_pathways.txt \
+  --target PTGS2 \
+  1>scores.tsv
 ```
-The scores will be saved to: scores.tsv
 
-3) Network propagation scoring:
+3) (WIP) Network propagation scoring:
 ```
 cd network_propagation
 ```
@@ -130,57 +140,31 @@ The scores will be saved to: output/multiplex_1.tsv
 
 Part 1. Pathway-based scoring
 
-We found 13 disease-specific pathways for male infertiltiy (EFO_0004248). We found 5217 genes that are both disease-specific and on the same pathways as target (ESR1). Here are top 10 genes based on pathway selectivity:
+We found 250 disease-specific pathways for rheumatic disease (EFO_0005755). We found 3259 genes that are both disease-specific and on the same pathways as target (PTGS2). Here are top 10 genes based on pathway selectivity:
 
 | GENE          | SCORE      |
 |---------------|------------|
-| ESR1          | 0.84       |
-| PGR           | 0.5333333333333333 |
-| UBC(77-152)   | 0.4666666666666667 |
-| UBC(609-684)  | 0.4666666666666667 |
-| UBC(533-608)  | 0.4666666666666667 |
-| UBC(457-532)  | 0.4666666666666667 |
-| UBC(381-456)  | 0.4666666666666667 |
-| UBC(305-380)  | 0.4666666666666667 |
-| UBC(229-304)  | 0.4666666666666667 |
+| PTGS2          | 0.279       |
+| CHUK           | 0.238 |
+| ALOX5   | 0.235 |
+| ALOX15  | 0.229 |
+| IKBKG  | 0.226 |
+| PIK3R1  | 0.223 |
+| RELA  | 0.214 |
+| IKBKB  | 0.211 |
+| GRB2-1  | 0.194 |
 
 
-Part 2. Network propagation scoring
-
-Reactome functional interaction network with 8114 genes and 70163 directed interactions:
-![interactions_reactome](figures/interactions_reactome.png)
-
-Here are top 10 genes based on network propagation (using target ESR1 as seed):
-| GENE    | SCORE  |
-|---------|--------|
-| ESR1    | 0.50   |
-| MAPK14  | 0.01   |
-| MAPK11  | 0.01   |
-| PIAS1   | 0.01   |
-| MAPK3   | 0.01   |
-| SP3     | 0.01   |
-| USF1    | 0.01   |
-| MAPK1   | 0.01   |
-| MYD88   | 0.01   |
-| IL1RAP  | 0.01   |
-
-
-NOTE: These results are generated for the purpose of the hackathon. Use more seeds (e.g., target ESR1 + disease genes) for more relevant results
-
-
-## Future directions
+## Future steps
 
 Short-term:
-- refine and test the pathway selectivity scoring formula
-- finalize and assess network propagation with Reactome functional interaction network (interactions_reactome.tsv)
-- get insights about scoring of new targets + interpretability
-- assess the method's performance, compare with similar methodologies
+- test the pathway selectivity scoring formula
+- finalize network propagation with Reactome functional interaction network
 
 Long-term:
 - adapt for other target types (genes, proteins, miRNA)
-- identify drug repurposing opportunities
 - effect of target knockout within the network
-- given a desired effect (inhibition, activation) recommend top drugs
+- recommend top drugs (including repurposing) given a desired effect (inhibition, activation) 
 - use efficy and safety (Open Targets Pharmacovigilance)
 - integrate pipeline within Open Targets Platform (https://platform.opentargets.org/)
 
@@ -190,7 +174,7 @@ Long-term:
 required packages: networkx, pandas, blitzgsea (https://github.com/MaayanLab/blitzgsea), multixrank (https://github.com/anthbapt/multixrank)
 
 
-## Special thank you to the Organizers of the Open Targets Hackathon!
+## Special thank you to the organizers of the Open Targets Hackathon!
 
 
 ## References
