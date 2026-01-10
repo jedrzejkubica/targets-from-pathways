@@ -79,7 +79,7 @@ def parse_disease_pathways(file):
 
 def scores_to_TSV(scores):
     '''
-    Print scores to stdout in TSV format, 2 columns: gene_name score
+    Print scores in descending order to stdout in TSV format, 2 columns: gene_name score
 
     arguments:
     - scores: dict with key=gene, value=score
@@ -87,5 +87,5 @@ def scores_to_TSV(scores):
     # header
     print("GENE\tSCORE")
 
-    for (gene, score) in sorted(scores.items()):
+    for (gene, score) in sorted(scores.items(), key=lambda item: item[1], reverse=True):
         print(gene + "\t" + str(score))
