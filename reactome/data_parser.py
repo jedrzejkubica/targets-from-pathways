@@ -1,4 +1,5 @@
 import logging
+import re
 
 # set up logger, using inherited config, in case we get called as a module
 logger = logging.getLogger(__name__)
@@ -24,6 +25,8 @@ def parse_pathway_mapping(pathway_mapping_file):
         logger.error("Opening provided Reactome mapping file %s: %s", pathway_mapping_file, e)
         raise Exception("Cannot open provided Reactome mapping file")
 
+    re_gene = re.compile(r'^[a-zA-Z0-9\-_]+$')  # allow for: letters, digits, "_", "-"
+
     for line in f:
         split_line = line.rstrip('\n').split('\t')
 
@@ -36,8 +39,11 @@ def parse_pathway_mapping(pathway_mapping_file):
 
         if species != "Homo sapiens":
             continue
-
+        
         gene_name = gene.split(" ")[0]
+        # skip if not a gene
+        if not re_gene.match(gene_name):
+            continue
 
         if gene_name in gene2pathways:
             gene2pathways[gene_name].append(pathwayID)
