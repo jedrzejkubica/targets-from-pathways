@@ -103,7 +103,7 @@ NOTE: `--pval_threshold` and `--fdr_threshold` are user-specified parameters for
 
 For each gene the score is calculated as follows:
 
-`score = (total number of disease pathways + total number of target pathways) / (#disease pathways containing the gene + #target pathways containing the gene)`
+`score = (#disease pathways containing the gene + #target pathways containing the gene) / (total number of disease pathways + total number of target pathways)`
 
 Pathway selectivity scores genes based on how frequently they occur in both pathways associated with the disease and the specified target. 
 
