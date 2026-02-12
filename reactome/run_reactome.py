@@ -126,7 +126,7 @@ def main(pathway_mapping_file, disease_pathways_file, target):
     # Pathway selectivity
     logger.info("Calculating scores")
     scores = calculate_scores(disease_and_target_genes, gene2pathways, pathway2genes, disease_pathways, target)
-    data_parser.scores_to_TSV(scores)
+    data_parser.scores_to_TSV(scores, gene2pathways)
 
 
 if __name__ == "__main__":

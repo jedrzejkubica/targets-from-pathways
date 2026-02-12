@@ -77,7 +77,7 @@ def parse_disease_pathways(file):
     return(list)
 
 
-def scores_to_TSV(scores):
+def scores_to_TSV(scores, gene2pathways):
     '''
     Print scores in descending order to stdout in TSV format, 2 columns: gene_name score
 
@@ -85,7 +85,8 @@ def scores_to_TSV(scores):
     - scores: dict with key=gene, value=score
     '''
     # header
-    print("GENE\tSCORE")
+    print("GENE\tSCORE\tPATHWAYS")
 
     for (gene, score) in sorted(scores.items(), key=lambda item: item[1], reverse=True):
-        print(gene + "\t" + str(score))
+        pathways = ",".join(gene2pathways[gene])
+        print(gene + "\t" + str(score) + "\t" + pathways)
