@@ -5,4 +5,5 @@ data/
 
 network_propagation/multixrank
 
-validation/data/
+validation/*
+!validation/validation.ipynb
