@@ -6,4 +6,5 @@ data/
 network_propagation/multixrank
 
 validation/*
-!validation/validation.ipynb
+!validation/not_working_targets.ipynb
+!validation/new_candidates.ipynb
